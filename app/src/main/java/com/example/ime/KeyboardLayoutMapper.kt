@@ -47,6 +47,14 @@ object KeyboardLayoutMapper {
                             output = displayChar
                         )
                     }
+                } else if (isShifted || isCapsLock) {
+                    // Visual feedback for Bengali layouts: show shifted character as primary label
+                    if (key.type == KeyType.NORMAL && key.shiftOutput.isNotEmpty() && key.shiftOutput != key.output) {
+                        updatedKey = updatedKey.copy(
+                            label = key.shiftOutput,
+                            hint = key.label
+                        )
+                    }
                 }
 
                 // Handle Dynamic Action Key (Enter/Search/Go/Send/Next) in bottom row

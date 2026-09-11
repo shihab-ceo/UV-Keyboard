@@ -967,8 +967,42 @@ class UVIME : InputMethodService() {
                     phoneticBuffer.append(output)
                     updateCandidates()
                 } else {
-                    ic.commitText(output, 1)
-                    currentWordBuffer.append(output)
+                    val isBengaliLayout = (currentMode == ThemeManager.LAYOUT_JATIYA ||
+                                           currentMode == ThemeManager.LAYOUT_BIJOY ||
+                                           currentMode == ThemeManager.LAYOUT_PRABHAT)
+
+                    val prevChar = currentWordBuffer.lastOrNull()?.toString()
+                        ?: ic.getTextBeforeCursor(1, 0)?.toString()
+
+                    val independentVowel = if (isBengaliLayout && prevChar == "্") {
+                        when (output) {
+                            "া" -> "আ"
+                            "ি" -> "ই"
+                            "ী" -> "ঈ"
+                            "ু" -> "উ"
+                            "ূ" -> "ঊ"
+                            "ৃ" -> "ঋ"
+                            "ে" -> "এ"
+                            "ৈ" -> "ঐ"
+                            "ো" -> "ও"
+                            "ৌ" -> "ঔ"
+                            else -> null
+                        }
+                    } else null
+
+                    if (independentVowel != null) {
+                        ic.deleteSurroundingText(1, 0)
+                        ic.commitText(independentVowel, 1)
+                        if (currentWordBuffer.isNotEmpty()) {
+                            currentWordBuffer.deleteCharAt(currentWordBuffer.length - 1)
+                            currentWordBuffer.append(independentVowel)
+                        } else {
+                            currentWordBuffer.append(independentVowel)
+                        }
+                    } else {
+                        ic.commitText(output, 1)
+                        currentWordBuffer.append(output)
+                    }
                     updateCandidates()
                 }
 

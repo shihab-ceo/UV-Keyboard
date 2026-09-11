@@ -78,6 +78,8 @@ object BengaliEngine {
         return if (isUpper) results.map { it.replaceFirstChar { c -> c.uppercase() } } else results
     }
 
+    fun transliterate(input: String): String = phoneticTransliterate(input)
+
     /**
      * Converts phonetic English text into Bengali Unicode.
      */
@@ -130,7 +132,8 @@ object BengaliEngine {
             "kkh" to "ক্ষ", "kkhy" to "ক্ষ্য",
             "ng" to "ঙ", "Ng" to "ঙ",
             "nj" to "ঞ্জ", "nc" to "ঞ্চ",
-            "sh" to "শ", "Sh" to "ষ", "ch" to "চ", "Ch" to "ছ",
+            "sh" to "শ", "Sh" to "ষ", "shh" to "ষ", "ch" to "ছ", "Ch" to "ছ",
+            "jh" to "ঝ",
             "kh" to "খ", "gh" to "ঘ", "th" to "ঠ", "Th" to "থ",
             "dh" to "ঢ", "Dh" to "ধ", "ph" to "ফ", "bh" to "ভ",
             "Rh" to "ঢ়",
@@ -151,7 +154,7 @@ object BengaliEngine {
             'p' to "প", 'f' to "ফ", 'b' to "ব", 'v' to "ভ",
             'm' to "ম", 'z' to "য", 'y' to "য়",
             'r' to "র", 'l' to "ল",
-            's' to "স", 'h' to "হ",
+            's' to "স", 'S' to "ষ", 'h' to "হ",
             'R' to "ড়", 'w' to "ও"
         )
 
@@ -160,7 +163,7 @@ object BengaliEngine {
             "ee" to "ঈ", "i" to "ই", "I" to "ঈ",
             "oo" to "ঊ", "u" to "উ", "U" to "ঊ",
             "oi" to "ঐ", "e" to "এ", "E" to "এ",
-            "ou" to "ঔ", "o" to "ও", "O" to "ও",
+            "ou" to "ঔ", "o" to "অ", "O" to "ও",
             "rri" to "ঋ"
         )
 
@@ -169,7 +172,7 @@ object BengaliEngine {
             "ee" to "ী", "i" to "ি", "I" to "ী",
             "oo" to "ূ", "u" to "ু", "U" to "ূ",
             "oi" to "ৈ", "e" to "ে", "E" to "ে",
-            "ou" to "ৌ", "o" to "ো", "O" to "ো",
+            "ou" to "ৌ", "o" to "", "O" to "ো",
             "rri" to "ৃ"
         )
 
@@ -218,9 +221,10 @@ object BengaliEngine {
 
             if (vowelFull.containsKey(cStr)) {
                 if (prevWasConsonant) {
-                    if (c == 'o' || c == 'a' && sb.isNotEmpty()) {
-                        // In Bengali inherent vowel 'o' or 'a' often keeps consonant plain or adds akar
-                        sb.append(if (c == 'a') "া" else "ো")
+                    if (c == 'o') {
+                        // Inherent vowel 'o' keeps preceding consonant plain without kar
+                    } else if (c == 'a') {
+                        sb.append("া")
                     } else {
                         sb.append(vowelSign[cStr] ?: cStr)
                     }

@@ -21,8 +21,8 @@ object BijoyLayoutMap {
             )
         }
 
-        val row2Hints = listOf("ঋ", "ূ", "ী", "ল", "।", "ভ", "খ", "থ", "ধ")
-        val row2Main  = listOf("ৃ", "ু", "ি", "া", "্", "ব", "ক", "ত", "দ")
+        val row2Hints = listOf("ঋ", "ূ", "ী", "ল", "ৎ", "ভ", "খ", "থ", "ধ", "ঁ")
+        val row2Main  = listOf("ৃ", "ু", "ি", "া", "্", "ব", "ক", "ত", "দ", "ঃ")
         val row2 = row2Main.mapIndexed { idx, char ->
             KeyboardKey(
                 label = char,
@@ -33,22 +33,23 @@ object BijoyLayoutMap {
         }
 
         // Row 3 Character Keys:
-        // Key 1 (Z): ৲ / ্র
+        // Key 1 (Z): ্র / ্য  (Ro-fala / Ja-fala)
         // Key 2 (X): ো / ৌ
         // Key 3 (C): ে / ৈ
-        // Key 4 (V): ব / র  -> Primary = 'ব', Upper Shift / Long-Press Hint = 'র'
+        // Key 4 (V): ব / র  -> Primary = 'ব', Upper Shift / Long-Press Hint = 'র' [Fixed duplicate 'র' bug]
         // Key 5 (B): ন / ণ
         // Key 6 (N): স / ষ
         // Key 7 (M): ম / শ
-        val row3Hints = listOf("্র", "ৌ", "ৈ", "র", "ণ", "ষ", "শ")
-        val row3Main  = listOf("৲", "ো", "ে", "ব", "ন", "স", "ম")
+        // Key 8:     ল / ।
+        val row3Hints = listOf("্য", "ৌ", "ৈ", "র", "ণ", "ষ", "শ", "।")
+        val row3Main  = listOf("্র", "ো", "ে", "ব", "ন", "স", "ম", "ল")
         val row3Keys = mutableListOf<KeyboardKey>()
-        row3Keys.add(KeyboardKey(label = "⬆", hint = null, output = "", type = KeyType.SHIFT, weight = 1.3f))
+        row3Keys.add(KeyboardKey(label = "⬆", hint = null, output = "", type = KeyType.SHIFT, weight = 1.25f))
         row3Main.forEachIndexed { idx, char ->
             val hint = row3Hints.getOrNull(idx)
             row3Keys.add(KeyboardKey(label = char, hint = hint, output = char, shiftOutput = hint ?: char))
         }
-        row3Keys.add(KeyboardKey(label = "⌫", hint = null, output = "", type = KeyType.BACKSPACE, weight = 1.3f))
+        row3Keys.add(KeyboardKey(label = "⌫", hint = null, output = "", type = KeyType.BACKSPACE, weight = 1.25f))
 
         val row4 = listOf(
             KeyboardKey(label = "?123", output = "", type = KeyType.SWITCH_SYMBOLS, weight = 1.2f),
