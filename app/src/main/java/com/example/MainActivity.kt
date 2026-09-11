@@ -96,7 +96,9 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -1119,7 +1121,12 @@ fun SettingsTabContent(themeManager: ThemeManager) {
     var haptic by remember { mutableStateOf(themeManager.hapticFeedbackEnabled) }
     var sound by remember { mutableStateOf(themeManager.keySoundEnabled) }
     var predictions by remember { mutableStateOf(themeManager.wordPredictionsEnabled) }
+    var autocorrect by remember { mutableStateOf(themeManager.autocorrectEnabled) }
+    var personalLearning by remember { mutableStateOf(themeManager.personalLearningEnabled) }
+    var aggressiveness by remember { mutableStateOf(themeManager.autocorrectAggressiveness) }
     var defaultLayout by remember { mutableStateOf(themeManager.defaultStartupLayout) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
 
     Column(
         modifier = Modifier
@@ -1271,14 +1278,14 @@ fun SettingsTabContent(themeManager: ThemeManager) {
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Bengali Word Predictions
+                // Smart Word Suggestions
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("বাংলা শব্দ সাজেশন (Word Predictions)", color = Color.White, fontSize = 14.sp)
-                        Text("ক্যান্ডিডেট বারে প্রাসঙ্গিক শব্দ প্রদর্শন", color = Color(0xFF94A3B8), fontSize = 11.sp)
+                        Text("স্মার্ট সাজেশন (Smart Suggestions)", color = Color.White, fontSize = 14.sp)
+                        Text("ক্যান্ডিডেট বারে প্রাসঙ্গিক শব্দ ও প্রেডিকশন প্রদর্শন", color = Color(0xFF94A3B8), fontSize = 11.sp)
                     }
                     Switch(
                         checked = predictions,
@@ -1288,6 +1295,130 @@ fun SettingsTabContent(themeManager: ThemeManager) {
                         },
                         colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFF2563EB))
                     )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Smart Autocorrect
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("স্মার্ট অটো-কারেক্ট (Smart Autocorrect)", color = Color.White, fontSize = 14.sp)
+                        Text("স্পেসবারে ভুল বানান স্বয়ংক্রিয়ভাবে সঠিক করা", color = Color(0xFF94A3B8), fontSize = 11.sp)
+                    }
+                    Switch(
+                        checked = autocorrect,
+                        onCheckedChange = {
+                            autocorrect = it
+                            themeManager.autocorrectEnabled = it
+                        },
+                        colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFF2563EB))
+                    )
+                }
+
+                if (autocorrect) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "অটো-কারেক্ট সংবেদনশীলতা (Aggressiveness)",
+                        color = Color(0xFF38BDF8),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf(
+                            "Conservative" to "সংযত",
+                            "Balanced" to "ভারসাম্যপূর্ণ",
+                            "Aggressive" to "আক্রমণাত্মক"
+                        ).forEach { (mode, label) ->
+                            val isSelected = aggressiveness == mode
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (isSelected) Color(0xFF2563EB) else Color(0xFF334155))
+                                    .clickable {
+                                        aggressiveness = mode
+                                        themeManager.autocorrectAggressiveness = mode
+                                    }
+                                    .padding(vertical = 8.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text(
+                                        text = mode,
+                                        color = if (isSelected) Color.White else Color(0xFFCBD5E1),
+                                        fontSize = 11.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                    )
+                                    Text(
+                                        text = label,
+                                        color = if (isSelected) Color(0xFFE0F2FE) else Color(0xFF94A3B8),
+                                        fontSize = 9.sp
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Personal Learning
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("ব্যক্তিগত শব্দ শিক্ষা (Personal Learning)", color = Color.White, fontSize = 14.sp)
+                        Text("আপনার ঘন ঘন টাইপ করা শব্দ অফলাইনে মনে রাখা", color = Color(0xFF94A3B8), fontSize = 11.sp)
+                    }
+                    Switch(
+                        checked = personalLearning,
+                        onCheckedChange = {
+                            personalLearning = it
+                            themeManager.personalLearningEnabled = it
+                        },
+                        colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFF2563EB))
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Clear Learned Words
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color(0xFF334155))
+                        .clickable {
+                            coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                                try {
+                                    val db = com.example.clipboard.AppDatabase.getInstance(context)
+                                    db.userWordDao().clearAll()
+                                } catch (_: Exception) {}
+                            }
+                            Toast.makeText(context, "ব্যক্তিগত শেখা শব্দ মুছে ফেলা হয়েছে", Toast.LENGTH_SHORT).show()
+                        }
+                        .padding(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Clear dictionary",
+                        tint = Color(0xFFF87171),
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Column {
+                        Text("শেখা শব্দ রিসেট (Clear Learned Words)", color = Color(0xFFF87171), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                        Text("অফলাইনে সংরক্ষিত ব্যক্তিগত ডিকশনারি মুছে ফেলবে", color = Color(0xFF94A3B8), fontSize = 10.sp)
+                    }
                 }
             }
         }

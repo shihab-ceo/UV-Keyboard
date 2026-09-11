@@ -40,6 +40,9 @@ class ThemeManager(private val context: Context) {
         const val KEY_HAPTIC_FEEDBACK = "haptic_feedback"
         const val KEY_KEY_SOUND = "key_sound"
         const val KEY_PREDICTIONS = "word_predictions"
+        const val KEY_AUTOCORRECT = "autocorrect_enabled"
+        const val KEY_PERSONAL_LEARNING = "personal_learning_enabled"
+        const val KEY_AUTOCORRECT_AGGRESSIVENESS = "autocorrect_aggressiveness"
         const val KEY_DEFAULT_LAYOUT = "default_layout"
         const val KEY_ENABLED_LAYOUTS = "enabled_layouts"
 
@@ -192,6 +195,18 @@ class ThemeManager(private val context: Context) {
     var wordPredictionsEnabled: Boolean
         get() = prefs.getBoolean(KEY_PREDICTIONS, true)
         set(value) = prefs.edit().putBoolean(KEY_PREDICTIONS, value).apply()
+
+    var autocorrectEnabled: Boolean
+        get() = prefs.getBoolean(KEY_AUTOCORRECT, true)
+        set(value) = prefs.edit().putBoolean(KEY_AUTOCORRECT, value).apply()
+
+    var personalLearningEnabled: Boolean
+        get() = prefs.getBoolean(KEY_PERSONAL_LEARNING, true)
+        set(value) = prefs.edit().putBoolean(KEY_PERSONAL_LEARNING, value).apply()
+
+    var autocorrectAggressiveness: String
+        get() = prefs.getString(KEY_AUTOCORRECT_AGGRESSIVENESS, "Balanced") ?: "Balanced"
+        set(value) = prefs.edit().putString(KEY_AUTOCORRECT_AGGRESSIVENESS, value).apply()
 
     var defaultStartupLayout: String
         get() = prefs.getString(KEY_DEFAULT_LAYOUT, LAYOUT_JATIYA) ?: LAYOUT_JATIYA

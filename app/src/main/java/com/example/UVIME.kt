@@ -44,6 +44,9 @@ import com.example.ime.KeyType
 import com.example.ime.KeyboardKey
 import com.example.ime.KeyboardLayoutMapper
 import com.example.ime.VoiceInputHelper
+import com.example.ime.suggestion.PersonalLearningStore
+import com.example.ime.suggestion.SuggestionCandidate
+import com.example.ime.suggestion.SuggestionEngine
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -88,6 +91,14 @@ class UVIME : InputMethodService() {
     private val phoneticBuffer = StringBuilder()
     private val currentWordBuffer = StringBuilder()
 
+    // Smart Suggestion & Autocorrect Engine
+    private lateinit var learningStore: PersonalLearningStore
+    private lateinit var suggestionEngine: SuggestionEngine
+    private var currentCandidates: List<SuggestionCandidate> = emptyList()
+    private var suggestionGenerationId: Long = 0L
+    private var lastAutocorrectOriginal: String? = null
+    private var lastAutocorrectReplacement: String? = null
+
     // Feedback
     private var vibrator: Vibrator? = null
     private var audioManager: AudioManager? = null
@@ -123,6 +134,10 @@ class UVIME : InputMethodService() {
                 }
             }
         )
+
+        // Smart suggestions & personal learning
+        learningStore = PersonalLearningStore(this, serviceScope)
+        suggestionEngine = SuggestionEngine(learningStore)
 
         // Read default layout
         currentMode = themeManager.defaultStartupLayout
@@ -175,7 +190,14 @@ class UVIME : InputMethodService() {
             candidateViewHelper = CandidateView(this, container) { word ->
                 playKeyFeedback()
                 val ic = currentInputConnection
-                if (currentMode == ThemeManager.LAYOUT_AVRO && phoneticBuffer.isNotEmpty()) {
+                val isAvro = currentMode == ThemeManager.LAYOUT_AVRO
+
+                // Learn selected word if field is safe
+                val isSafe = suggestionEngine.isSafeField(currentInputEditorInfo)
+                val lang = if (suggestionEngine.isBengaliScript(word)) "bn" else "en"
+                learningStore.learnWord(word, lang, isSafe, themeManager.personalLearningEnabled)
+
+                if (isAvro && phoneticBuffer.isNotEmpty()) {
                     ic?.commitText(word + " ", 1)
                     phoneticBuffer.clear()
                 } else if (currentWordBuffer.isNotEmpty()) {
@@ -185,6 +207,8 @@ class UVIME : InputMethodService() {
                 } else {
                     ic?.commitText(word + " ", 1)
                 }
+                lastAutocorrectOriginal = null
+                lastAutocorrectReplacement = null
                 if (!isCapsLock && isShifted) {
                     isShifted = false
                     buildKeyboardRows()
@@ -202,6 +226,9 @@ class UVIME : InputMethodService() {
         super.onStartInputView(info, restarting)
         phoneticBuffer.clear()
         currentWordBuffer.clear()
+        currentCandidates = emptyList()
+        lastAutocorrectOriginal = null
+        lastAutocorrectReplacement = null
         isShifted = true // Default to Capital / Shifted state on startup
         isCapsLock = false
         isSymbols = false
@@ -445,22 +472,65 @@ class UVIME : InputMethodService() {
     private fun updateCandidates() {
         if (!themeManager.wordPredictionsEnabled) {
             candidateViewHelper?.clear()
+            currentCandidates = emptyList()
             return
         }
 
-        val theme = themeManager.getCurrentTheme()
         val query = if (currentMode == ThemeManager.LAYOUT_AVRO) {
             phoneticBuffer.toString()
         } else {
             currentWordBuffer.toString()
         }
-        val fontScale = themeManager.fontSizeScale.coerceIn(0.80f, 2.50f)
-        candidateViewHelper?.updateSuggestions(
-            prefix = query,
-            layoutMode = currentMode,
-            theme = theme,
-            fontSizeScale = fontScale
-        )
+
+        if (query.isEmpty()) {
+            candidateViewHelper?.clear()
+            currentCandidates = emptyList()
+            return
+        }
+
+        val genId = ++suggestionGenerationId
+        val ic = currentInputConnection
+        val textBefore = ic?.getTextBeforeCursor(40, 0)?.toString() ?: ""
+        val precedingWord = extractPrecedingWord(textBefore, query)
+        val editorInfo = currentInputEditorInfo
+        val isAvro = (currentMode == ThemeManager.LAYOUT_AVRO)
+
+        serviceScope.launch(Dispatchers.Default) {
+            val candidates = suggestionEngine.getSuggestions(
+                query = query,
+                precedingWord = precedingWord,
+                editorInfo = editorInfo,
+                suggestionsEnabled = themeManager.wordPredictionsEnabled,
+                autocorrectEnabled = themeManager.autocorrectEnabled,
+                personalLearningEnabled = themeManager.personalLearningEnabled,
+                aggressiveness = themeManager.autocorrectAggressiveness,
+                isAvroMode = isAvro
+            )
+            withContext(Dispatchers.Main) {
+                if (genId == suggestionGenerationId) {
+                    currentCandidates = candidates
+                    val theme = themeManager.getCurrentTheme()
+                    val fontScale = themeManager.fontSizeScale.coerceIn(0.80f, 2.50f)
+                    candidateViewHelper?.renderSuggestionCandidates(candidates, theme, fontScale)
+                }
+            }
+        }
+    }
+
+    private fun extractPrecedingWord(textBeforeCursor: String, currentWord: String): String? {
+        val withoutCurrent = if (textBeforeCursor.endsWith(currentWord)) {
+            textBeforeCursor.substring(0, textBeforeCursor.length - currentWord.length)
+        } else {
+            textBeforeCursor
+        }
+        val trimmed = withoutCurrent.trimEnd()
+        if (trimmed.isEmpty()) return null
+        val lastSpace = trimmed.lastIndexOfAny(charArrayOf(' ', '\n', '\t', '.', ',', '।', '!', '?'))
+        return if (lastSpace >= 0) {
+            trimmed.substring(lastSpace + 1).trim()
+        } else {
+            trimmed
+        }
     }
 
     private fun getDynamicActionIcon(): String {
@@ -891,6 +961,8 @@ class UVIME : InputMethodService() {
                 } else {
                     key.output
                 }
+                lastAutocorrectOriginal = null
+                lastAutocorrectReplacement = null
                 if (currentMode == ThemeManager.LAYOUT_AVRO && isAsciiLetter(output)) {
                     phoneticBuffer.append(output)
                     updateCandidates()
@@ -924,6 +996,20 @@ class UVIME : InputMethodService() {
                 buildKeyboardRows()
             }
             KeyType.BACKSPACE -> {
+                // Revert previous autocorrection if user presses backspace immediately
+                if (lastAutocorrectOriginal != null && lastAutocorrectReplacement != null) {
+                    val original = lastAutocorrectOriginal!!
+                    val replacement = lastAutocorrectReplacement!!
+                    ic.deleteSurroundingText(replacement.length + 1, 0)
+                    ic.commitText(original, 1)
+                    currentWordBuffer.clear()
+                    currentWordBuffer.append(original)
+                    lastAutocorrectOriginal = null
+                    lastAutocorrectReplacement = null
+                    updateCandidates()
+                    return
+                }
+
                 if (phoneticBuffer.isNotEmpty()) {
                     phoneticBuffer.deleteCharAt(phoneticBuffer.length - 1)
                     updateCandidates()
@@ -936,14 +1022,50 @@ class UVIME : InputMethodService() {
                 }
             }
             KeyType.SPACE -> {
-                if (currentMode == ThemeManager.LAYOUT_AVRO && phoneticBuffer.isNotEmpty()) {
-                    val transliterated = BengaliEngine.phoneticTransliterate(phoneticBuffer.toString())
-                    ic.commitText(transliterated + " ", 1)
-                    phoneticBuffer.clear()
+                val isAvro = (currentMode == ThemeManager.LAYOUT_AVRO)
+                val topCandidate = currentCandidates.firstOrNull()
+
+                if (themeManager.autocorrectEnabled && topCandidate != null && topCandidate.isAutocorrect) {
+                    val rawWord = if (isAvro) phoneticBuffer.toString() else currentWordBuffer.toString()
+                    val replacement = topCandidate.text
+
+                    if (isAvro && phoneticBuffer.isNotEmpty()) {
+                        ic.commitText(replacement + " ", 1)
+                        phoneticBuffer.clear()
+                    } else if (currentWordBuffer.isNotEmpty()) {
+                        ic.deleteSurroundingText(currentWordBuffer.length, 0)
+                        ic.commitText(replacement + " ", 1)
+                        currentWordBuffer.clear()
+                    } else {
+                        ic.commitText(replacement + " ", 1)
+                    }
+
+                    val isSafe = suggestionEngine.isSafeField(currentInputEditorInfo)
+                    val lang = if (suggestionEngine.isBengaliScript(replacement)) "bn" else "en"
+                    learningStore.learnWord(replacement, lang, isSafe, themeManager.personalLearningEnabled)
+
+                    lastAutocorrectOriginal = rawWord
+                    lastAutocorrectReplacement = replacement
                 } else {
-                    ic.commitText(" ", 1)
+                    if (isAvro && phoneticBuffer.isNotEmpty()) {
+                        val transliterated = BengaliEngine.phoneticTransliterate(phoneticBuffer.toString())
+                        ic.commitText(transliterated + " ", 1)
+                        val isSafe = suggestionEngine.isSafeField(currentInputEditorInfo)
+                        learningStore.learnWord(transliterated, "bn", isSafe, themeManager.personalLearningEnabled)
+                        phoneticBuffer.clear()
+                    } else {
+                        if (currentWordBuffer.isNotEmpty()) {
+                            val typed = currentWordBuffer.toString()
+                            val isSafe = suggestionEngine.isSafeField(currentInputEditorInfo)
+                            val lang = if (suggestionEngine.isBengaliScript(typed)) "bn" else "en"
+                            learningStore.learnWord(typed, lang, isSafe, themeManager.personalLearningEnabled)
+                        }
+                        ic.commitText(" ", 1)
+                    }
+                    currentWordBuffer.clear()
+                    lastAutocorrectOriginal = null
+                    lastAutocorrectReplacement = null
                 }
-                currentWordBuffer.clear()
                 updateCandidates()
 
                 val textBefore = ic.getTextBeforeCursor(4, 0)?.toString() ?: ""
@@ -956,12 +1078,20 @@ class UVIME : InputMethodService() {
                 }
             }
             KeyType.ENTER -> {
+                val isSafe = suggestionEngine.isSafeField(currentInputEditorInfo)
                 if (phoneticBuffer.isNotEmpty()) {
                     val transliterated = BengaliEngine.phoneticTransliterate(phoneticBuffer.toString())
                     ic.commitText(transliterated, 1)
+                    learningStore.learnWord(transliterated, "bn", isSafe, themeManager.personalLearningEnabled)
                     phoneticBuffer.clear()
+                } else if (currentWordBuffer.isNotEmpty()) {
+                    val typed = currentWordBuffer.toString()
+                    val lang = if (suggestionEngine.isBengaliScript(typed)) "bn" else "en"
+                    learningStore.learnWord(typed, lang, isSafe, themeManager.personalLearningEnabled)
                 }
                 currentWordBuffer.clear()
+                lastAutocorrectOriginal = null
+                lastAutocorrectReplacement = null
                 performDynamicAction()
                 updateCandidates()
             }

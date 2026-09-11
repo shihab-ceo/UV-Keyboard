@@ -4,10 +4,13 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import com.example.ime.suggestion.UserWordDao
+import com.example.ime.suggestion.UserWordEntity
 
-@Database(entities = [ClipboardItem::class], version = 1, exportSchema = false)
+@Database(entities = [ClipboardItem::class, UserWordEntity::class], version = 2, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun clipboardDao(): ClipboardDao
+    abstract fun userWordDao(): UserWordDao
 
     companion object {
         @Volatile
