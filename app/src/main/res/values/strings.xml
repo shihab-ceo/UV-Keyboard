@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">UV Keyboard</string>
+    <string name="ime_name">UV Keyboard</string>
+    <string name="subtype_bn">Bengali (Jatiya BDS 1738)</string>
+    <string name="subtype_en">English (US)</string>
+</resources>
+

@@ -1,0 +1,7 @@
+{
+  "name": "UV Keyboard",
+  "description": "Production-ready Android custom keyboard with Bengali (Jatiya BDS 1738, Avro Phonetic, Bijoy Classic) and English layouts, Voice-to-Text, 3-day Smart Clipboard with pinning, and customizable themes.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
