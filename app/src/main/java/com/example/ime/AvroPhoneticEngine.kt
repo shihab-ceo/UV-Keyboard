@@ -220,7 +220,29 @@ object AvroPhoneticEngine {
         var lastAppendedConsonant: String? = null
 
         while (i < input.length) {
-            // Check special diacritics (e.g. ^ for chandrabindu, ` for hasanta, : for visarga)
+            // Check 3-character special diacritics / symbols (e.g. t`` -> ৎ, ng` -> ং)
+            if (i + 3 <= input.length) {
+                val sub3 = input.substring(i, i + 3)
+                if (SPECIAL_MAP.containsKey(sub3)) {
+                    sb.append(SPECIAL_MAP[sub3])
+                    i += 3
+                    prevWasConsonant = false
+                    continue
+                }
+            }
+
+            // Check 2-character special diacritics / symbols (e.g. :: or :` -> ঃ, ng` -> ং)
+            if (i + 2 <= input.length) {
+                val sub2 = input.substring(i, i + 2)
+                if (SPECIAL_MAP.containsKey(sub2)) {
+                    sb.append(SPECIAL_MAP[sub2])
+                    i += 2
+                    prevWasConsonant = false
+                    continue
+                }
+            }
+
+            // Check single-character special diacritics (e.g. ^ for chandrabindu, ` for hasanta)
             if (input[i] == '^') {
                 sb.append("ঁ")
                 i++
@@ -232,9 +254,9 @@ object AvroPhoneticEngine {
                 prevWasConsonant = false
                 continue
             }
-            if (input[i] == ':' && i + 1 < input.length && input[i + 1] == ':') {
-                sb.append("ঃ")
-                i += 2
+            if (input[i] == '$') {
+                sb.append("৳")
+                i++
                 prevWasConsonant = false
                 continue
             }

@@ -292,5 +292,31 @@ class ExampleUnitTest {
     val rephSequence = "র\u09CD\u200D"
     assertEquals(2, com.example.ime.BengaliCompositionHelper.getDeletionLength(rephSequence))
   }
+
+  @Test
+  fun testAvro_AspiratedAndDiacritics() {
+    // ড়, ঢ়, য়
+    assertEquals("ড়", BengaliEngine.transliterate("R"))
+    assertEquals("ঢ়", BengaliEngine.transliterate("Rh"))
+    assertEquals("য়", BengaliEngine.transliterate("y"))
+
+    // ং, ঃ, ঁ, ৎ
+    assertEquals("ং", BengaliEngine.transliterate("ng`"))
+    assertEquals("ঁ", BengaliEngine.transliterate("^"))
+    assertEquals("ৎ", BengaliEngine.transliterate("t``"))
+    assertEquals("ঃ", BengaliEngine.transliterate("::"))
+
+    // Aspirated consonants: kh, gh, ch, jh, th, Th, dh, Dh, ph, bh
+    assertEquals("খ", BengaliEngine.transliterate("kh"))
+    assertEquals("ঘ", BengaliEngine.transliterate("gh"))
+    assertEquals("ছ", BengaliEngine.transliterate("ch"))
+    assertEquals("ঝ", BengaliEngine.transliterate("jh"))
+    assertEquals("ঠ", BengaliEngine.transliterate("th"))
+    assertEquals("থ", BengaliEngine.transliterate("Th"))
+    assertEquals("ঢ", BengaliEngine.transliterate("dh"))
+    assertEquals("ধ", BengaliEngine.transliterate("Dh"))
+    assertEquals("ফ", BengaliEngine.transliterate("ph"))
+    assertEquals("ভ", BengaliEngine.transliterate("bh"))
+  }
 }
 
