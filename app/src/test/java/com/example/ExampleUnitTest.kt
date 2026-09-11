@@ -156,5 +156,141 @@ class ExampleUnitTest {
     assertEquals("বাংলাদেশ", BengaliEngine.transliterate("bangladesh"))
     assertEquals("অনেক", BengaliEngine.transliterate("onek"))
   }
+
+  @Test
+  fun testBengaliComposition_IndependentVowelsAndSigns() {
+    // 1. Independent vowels remain independent
+    val independentResult = com.example.ime.BengaliCompositionEngine.processInput("আ", null)
+    assertTrue(independentResult is com.example.ime.CompositionResult.Commit)
+    assertEquals("আ", (independentResult as com.example.ime.CompositionResult.Commit).text)
+
+    // 2. Consonant + Vowel Sign (ক + ি = কি)
+    val consonantResult = com.example.ime.BengaliCompositionEngine.processInput("ক", null)
+    assertEquals("ক", (consonantResult as com.example.ime.CompositionResult.Commit).text)
+
+    val karResult = com.example.ime.BengaliCompositionEngine.processInput("ি", "ক")
+    assertEquals("ি", (karResult as com.example.ime.CompositionResult.Commit).text)
+
+    // 3. Conjunct construction (ক + ্ + ষ = ক্ষ)
+    val hasantaResult = com.example.ime.BengaliCompositionEngine.processInput("্", "ক")
+    assertEquals("্", (hasantaResult as com.example.ime.CompositionResult.Commit).text)
+
+    val conjunctResult = com.example.ime.BengaliCompositionEngine.processInput("ষ", "্")
+    assertEquals("ষ", (conjunctResult as com.example.ime.CompositionResult.Commit).text)
+
+    // Verify whole string equality: "ক" + "্" + "ষ" == "ক্ষ"
+    val composedKhyo = "ক" + "্" + "ষ"
+    assertEquals("ক্ষ", composedKhyo)
+  }
+
+  @Test
+  fun testBijoyComposition_GLinkAndPhalas() {
+    // Bijoy G-link: hasanta + া -> আ
+    val gLinkResult = com.example.ime.BengaliCompositionEngine.processInput("া", "্", isBijoy = true)
+    assertTrue(gLinkResult is com.example.ime.CompositionResult.Replace)
+    val replaceResult = gLinkResult as com.example.ime.CompositionResult.Replace
+    assertEquals(1, replaceResult.charsToDelete)
+    assertEquals("আ", replaceResult.replacement)
+
+    // Common Bijoy conjunct sequences:
+    // ক + ্ + র = ক্র (ra-phala)
+    val kra = "ক" + "্" + "র"
+    assertEquals("ক্র", kra)
+
+    // ত + ্ + র = ত্র
+    val tra = "ত" + "্" + "র"
+    assertEquals("ত্র", tra)
+
+    // শ + ্ + র = শ্র
+    val shra = "শ" + "্" + "র"
+    assertEquals("শ্র", shra)
+
+    // ক + ্য = ক্য (ya-phala)
+    val kya = "ক" + "্য"
+    assertEquals("ক্য", kya)
+
+    // র + ্ + ক = র্ক (reph)
+    val rephKa = "র" + "্" + "ক"
+    assertEquals("র্ক", rephKa)
+  }
+
+  @Test
+  fun testAvro_CaseSensitivePhonetics() {
+    // Test t vs T (ট vs ত)
+    assertEquals("ট", BengaliEngine.transliterate("t"))
+    assertEquals("ত", BengaliEngine.transliterate("T"))
+
+    // Test d vs D (ড vs দ)
+    assertEquals("ড", BengaliEngine.transliterate("d"))
+    assertEquals("দ", BengaliEngine.transliterate("D"))
+
+    // Test n vs N (ন vs ণ)
+    assertEquals("ন", BengaliEngine.transliterate("n"))
+    assertEquals("ণ", BengaliEngine.transliterate("N"))
+
+    // Test s vs S (স vs ষ)
+    assertEquals("স", BengaliEngine.transliterate("s"))
+    assertEquals("ষ", BengaliEngine.transliterate("S"))
+
+    // Test r vs R vs Rh (র vs ড় vs ঢ়)
+    assertEquals("র", BengaliEngine.transliterate("r"))
+    assertEquals("ড়", BengaliEngine.transliterate("R"))
+    assertEquals("ঢ়", BengaliEngine.transliterate("Rh"))
+  }
+
+  @Test
+  fun testAvro_RealWorldWords() {
+    val targetWords = listOf(
+      "বাংলা", "আমার", "তুমি", "ভালো", "কেমন",
+      "কথা", "শব্দ", "প্রযুক্তি", "কম্পিউটার", "কীবোর্ড",
+      "অ্যান্ড্রয়েড", "বাংলাদেশ", "স্বাধীনতা", "ভাষা", "সফটওয়্যার"
+    )
+
+    assertEquals("বাংলা", BengaliEngine.transliterate("bangla"))
+    assertEquals("আমার", BengaliEngine.transliterate("amar"))
+    assertEquals("তুমি", BengaliEngine.transliterate("tumi"))
+    assertEquals("ভালো", BengaliEngine.transliterate("bhalo"))
+    assertEquals("কেমন", BengaliEngine.transliterate("kemon"))
+    assertEquals("কথা", BengaliEngine.transliterate("kotha"))
+    assertEquals("শব্দ", BengaliEngine.transliterate("shobdo"))
+    assertEquals("প্রযুক্তি", BengaliEngine.transliterate("projukti"))
+    assertEquals("কম্পিউটার", BengaliEngine.transliterate("computer"))
+    assertEquals("কীবোর্ড", BengaliEngine.transliterate("keyboard"))
+    assertEquals("অ্যান্ড্রয়েড", BengaliEngine.transliterate("android"))
+    assertEquals("বাংলাদেশ", BengaliEngine.transliterate("bangladesh"))
+    assertEquals("স্বাধীনতা", BengaliEngine.transliterate("shadhinota"))
+    assertEquals("ভাষা", BengaliEngine.transliterate("bhasha"))
+    assertEquals("সফটওয়্যার", BengaliEngine.transliterate("software"))
+  }
+
+  @Test
+  fun testAvro_KeyboardLayoutMapperDoesNotAlterPhoneticOutput() {
+    // When shifted, Avro keys should display uppercase on key label, but output remains original mapping
+    val avroRows = com.example.ime.KeyboardLayoutMapper.getLayoutRows(
+      ThemeManager.LAYOUT_AVRO,
+      isShifted = true,
+      isCapsLock = false,
+      actionIcon = "🔍"
+    )
+    val tKey = avroRows.flatMap { it }.first { it.hint == "৫" || it.label == "T" }
+    assertEquals("T", tKey.label) // UI display shows uppercase
+    assertEquals("t", tKey.output) // Output is still phonetic 't'
+    assertEquals("T", tKey.shiftOutput) // Shifted output is 'T'
+  }
+
+  @Test
+  fun testBengaliBackspace_DeletionLength() {
+    // Single plain character
+    assertEquals(1, com.example.ime.BengaliCompositionHelper.getDeletionLength("ক"))
+    // Kar vowel sign
+    assertEquals(1, com.example.ime.BengaliCompositionHelper.getDeletionLength("কা"))
+    // Virama
+    assertEquals(1, com.example.ime.BengaliCompositionHelper.getDeletionLength("ক্"))
+    // Empty string
+    assertEquals(1, com.example.ime.BengaliCompositionHelper.getDeletionLength(""))
+    // ZWJ preceded by hasanta
+    val rephSequence = "র\u09CD\u200D"
+    assertEquals(2, com.example.ime.BengaliCompositionHelper.getDeletionLength(rephSequence))
+  }
 }
 

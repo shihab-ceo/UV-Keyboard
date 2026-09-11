@@ -80,7 +80,7 @@ class UVIME : InputMethodService() {
 
     // State
     private var currentMode = ThemeManager.LAYOUT_JATIYA
-    private var isShifted = true // Initial state: defaults to Capital / Shifted state
+    private var isShifted = false // Default to unshifted state on startup
     private var isCapsLock = false
     private var lastShiftTapTime = 0L
     private val DOUBLE_TAP_TIMEOUT = 350L
@@ -229,7 +229,8 @@ class UVIME : InputMethodService() {
         currentCandidates = emptyList()
         lastAutocorrectOriginal = null
         lastAutocorrectReplacement = null
-        isShifted = true // Default to Capital / Shifted state on startup
+        // English starts capitalized for sentence-start; Bengali layouts start unshifted
+        isShifted = (currentMode == ThemeManager.LAYOUT_ENGLISH)
         isCapsLock = false
         isSymbols = false
         isBengaliNumbers = false
@@ -971,33 +972,32 @@ class UVIME : InputMethodService() {
                                            currentMode == ThemeManager.LAYOUT_BIJOY ||
                                            currentMode == ThemeManager.LAYOUT_PRABHAT)
 
-                    val prevChar = currentWordBuffer.lastOrNull()?.toString()
-                        ?: ic.getTextBeforeCursor(1, 0)?.toString()
+                    if (isBengaliLayout) {
+                        val prevChar = currentWordBuffer.lastOrNull()?.toString()
+                            ?: ic.getTextBeforeCursor(1, 0)?.toString()
 
-                    val independentVowel = if (isBengaliLayout && prevChar == "্") {
-                        when (output) {
-                            "া" -> "আ"
-                            "ি" -> "ই"
-                            "ী" -> "ঈ"
-                            "ু" -> "উ"
-                            "ূ" -> "ঊ"
-                            "ৃ" -> "ঋ"
-                            "ে" -> "এ"
-                            "ৈ" -> "ঐ"
-                            "ো" -> "ও"
-                            "ৌ" -> "ঔ"
-                            else -> null
-                        }
-                    } else null
+                        val compResult = com.example.ime.BengaliCompositionEngine.processInput(
+                            incoming = output,
+                            prevChar = prevChar,
+                            isBijoy = (currentMode == ThemeManager.LAYOUT_BIJOY)
+                        )
 
-                    if (independentVowel != null) {
-                        ic.deleteSurroundingText(1, 0)
-                        ic.commitText(independentVowel, 1)
-                        if (currentWordBuffer.isNotEmpty()) {
-                            currentWordBuffer.deleteCharAt(currentWordBuffer.length - 1)
-                            currentWordBuffer.append(independentVowel)
-                        } else {
-                            currentWordBuffer.append(independentVowel)
+                        when (compResult) {
+                            is com.example.ime.CompositionResult.Replace -> {
+                                ic.deleteSurroundingText(compResult.charsToDelete, 0)
+                                ic.commitText(compResult.replacement, 1)
+                                if (currentWordBuffer.length >= compResult.charsToDelete) {
+                                    currentWordBuffer.delete(
+                                        currentWordBuffer.length - compResult.charsToDelete,
+                                        currentWordBuffer.length
+                                    )
+                                }
+                                currentWordBuffer.append(compResult.replacement)
+                            }
+                            is com.example.ime.CompositionResult.Commit -> {
+                                ic.commitText(compResult.text, 1)
+                                currentWordBuffer.append(compResult.text)
+                            }
                         }
                     } else {
                         ic.commitText(output, 1)
@@ -1048,9 +1048,12 @@ class UVIME : InputMethodService() {
                     phoneticBuffer.deleteCharAt(phoneticBuffer.length - 1)
                     updateCandidates()
                 } else {
-                    ic.deleteSurroundingText(1, 0)
+                    val textBefore = ic.getTextBeforeCursor(4, 0)?.toString() ?: ""
+                    val deleteLen = com.example.ime.BengaliCompositionHelper.getDeletionLength(textBefore)
+                    ic.deleteSurroundingText(deleteLen, 0)
                     if (currentWordBuffer.isNotEmpty()) {
-                        currentWordBuffer.deleteCharAt(currentWordBuffer.length - 1)
+                        val bufferDelete = minOf(deleteLen, currentWordBuffer.length)
+                        currentWordBuffer.delete(currentWordBuffer.length - bufferDelete, currentWordBuffer.length)
                     }
                     updateCandidates()
                 }

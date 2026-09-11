@@ -38,13 +38,22 @@ object KeyboardLayoutMapper {
                     updatedKey = updatedKey.copy(label = shiftLabel)
                 }
 
-                // Handle English uppercase transformation when shifted or caps locked
-                if (layoutMode == ThemeManager.LAYOUT_ENGLISH || layoutMode == ThemeManager.LAYOUT_AVRO) {
+                // Handle visual transformation and output for Latin-based layouts (English / Avro)
+                if (layoutMode == ThemeManager.LAYOUT_ENGLISH) {
                     if (key.type == KeyType.NORMAL && key.output.length == 1 && key.output[0].isLetter()) {
                         val displayChar = if (isShifted || isCapsLock) key.output.uppercase() else key.output.lowercase()
                         updatedKey = updatedKey.copy(
                             label = displayChar,
                             output = displayChar
+                        )
+                    }
+                } else if (layoutMode == ThemeManager.LAYOUT_AVRO) {
+                    // For Avro Phonetic: Visual label reflects Shift/Caps, but key.output and shiftOutput
+                    // preserve case-sensitive Avro mappings (e.g. t vs T, d vs D).
+                    if (key.type == KeyType.NORMAL && key.output.length == 1 && key.output[0].isLetter()) {
+                        val displayChar = if (isShifted || isCapsLock) key.output.uppercase() else key.output.lowercase()
+                        updatedKey = updatedKey.copy(
+                            label = displayChar
                         )
                     }
                 } else if (isShifted || isCapsLock) {
