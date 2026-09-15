@@ -1,6 +1,7 @@
 package com.example
 
 import android.Manifest
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -42,6 +43,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Clear
@@ -58,6 +60,7 @@ import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -67,6 +70,7 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -598,13 +602,34 @@ fun SetupTabContent(
 @Composable
 fun ThemesTabContent(themeManager: ThemeManager) {
     val context = LocalContext.current
+    val customThemeRepo = remember { CustomThemeRepository(context) }
+    var customThemesList by remember { mutableStateOf(customThemeRepo.getAllCustomThemes()) }
+    var activeCustomThemeId by remember { mutableStateOf(themeManager.activeCustomThemeId) }
     var selectedThemeId by remember { mutableStateOf(themeManager.selectedThemeId) }
     var useCustomColor by remember { mutableStateOf(themeManager.useCustomColor) }
     var customColorInt by remember { mutableIntStateOf(themeManager.customBgColor) }
     var bgImageUriStr by remember { mutableStateOf(themeManager.bgImageUriString) }
     var bgOpacity by remember { mutableFloatStateOf(themeManager.bgImageOpacity) }
 
-    // Gallery Image Picker Launcher
+    // Custom Theme Builder Dialog State
+    var showBuilderDialog by remember { mutableStateOf(false) }
+    var themeToEdit by remember { mutableStateOf<CustomThemeModel?>(null) }
+
+    // Preset Filter Category
+    var selectedPresetCategory by remember { mutableStateOf("All") }
+
+    // Cropping Activity Launcher
+    val cropLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            bgImageUriStr = themeManager.bgImageUriString
+            bgOpacity = themeManager.bgImageOpacity
+            Toast.makeText(context, "Keyboard background updated!", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // Gallery Image Picker Launcher -> forwards to ImageCropActivity
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
@@ -615,9 +640,26 @@ fun ThemesTabContent(themeManager: ThemeManager) {
                     Intent.FLAG_GRANT_READ_URI_PERMISSION
                 )
             } catch (_: Exception) {}
-            themeManager.bgImageUriString = uri.toString()
-            bgImageUriStr = uri.toString()
-            Toast.makeText(context, "Background image selected!", Toast.LENGTH_SHORT).show()
+            val cropIntent = Intent(context, ImageCropActivity::class.java).apply {
+                putExtra(ImageCropActivity.EXTRA_IMAGE_URI, uri.toString())
+                data = uri
+            }
+            cropLauncher.launch(cropIntent)
+        }
+    }
+
+    val filteredPresetThemes = remember(selectedPresetCategory) {
+        when (selectedPresetCategory) {
+            "Classic" -> ThemeManager.PRESET_THEMES.filter {
+                it.id in listOf("material_light", "amoled_black", "midnight_blue", "dark_night", "classic_white")
+            }
+            "Gradient" -> ThemeManager.PRESET_THEMES.filter {
+                it.isGradient || it.id in listOf("sunset_gradient", "deep_space_purple", "ocean_gradient", "forest_emerald")
+            }
+            "Neon" -> ThemeManager.PRESET_THEMES.filter {
+                it.id in listOf("high_contrast_dark", "neon_purple", "pastel_mint", "slate", "aqua_sky", "greenery")
+            }
+            else -> ThemeManager.PRESET_THEMES
         }
     }
 
@@ -626,48 +668,134 @@ fun ThemesTabContent(themeManager: ThemeManager) {
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
         // Header
-        Text(
-            text = "🎨 কীবোর্ড থিম ও ব্যাকগ্রাউন্ড কাস্টমাইজেশন",
-            color = Color.White,
-            fontWeight = FontWeight.Bold,
-            fontSize = 17.sp
-        )
-        Text(
-            text = "Choose from elegant preset themes, pick a solid custom color, or select a photo from your gallery.",
-            color = Color(0xFF94A3B8),
-            fontSize = 13.sp
-        )
-
-        // Preset Themes Section
-        Text(
-            text = "১. প্রিসেট থিমস (Preset Themes)",
-            color = Color(0xFF38BDF8),
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 14.sp
-        )
-        LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            contentPadding = PaddingValues(vertical = 4.dp)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            items(ThemeManager.PRESET_THEMES) { theme ->
-                val isSelected = !useCustomColor && selectedThemeId == theme.id
-                ThemeCard(
-                    theme = theme,
-                    isSelected = isSelected,
-                    onClick = {
-                        useCustomColor = false
-                        themeManager.useCustomColor = false
-                        selectedThemeId = theme.id
-                        themeManager.selectedThemeId = theme.id
-                    }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "🎨 কীবোর্ড থিম ও থিম বিল্ডার",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp
                 )
+                Text(
+                    text = "বিল্ট-ইন প্রিসেট থিম বেছে নিন অথবা সম্পূর্ণ কাস্টম থিম তৈরি করুন।",
+                    color = Color(0xFF94A3B8),
+                    fontSize = 13.sp
+                )
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(
+                    onClick = {
+                        context.startActivity(android.content.Intent(context, ThemeSelectionActivity::class.java))
+                    },
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF38BDF8))
+                ) {
+                    Icon(Icons.Default.Palette, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("থিম স্ক্রিন", fontSize = 12.sp)
+                }
+                Button(
+                    onClick = {
+                        themeToEdit = null
+                        showBuilderDialog = true
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7C3AED)),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("নতুন থিম", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                }
             }
         }
 
-        // Custom Solid Color Section
+        // Section 1: Built-in Preset Themes
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
+            shape = RoundedCornerShape(14.dp)
+        ) {
+            Column(modifier = Modifier.padding(14.dp)) {
+                Text(
+                    text = "১. প্রিসেট থিমস (Built-in Preset Themes)",
+                    color = Color(0xFF38BDF8),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Category Filter Chips
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.horizontalScroll(rememberScrollState())
+                ) {
+                    val categories = listOf(
+                        "All" to "সকল থিম",
+                        "Classic" to "ক্লাসিক",
+                        "Gradient" to "গ্রেডিয়েন্ট",
+                        "Neon" to "মিনিমাল ও নিয়ন"
+                    )
+                    categories.forEach { (catKey, catLabel) ->
+                        FilterChip(
+                            selected = selectedPresetCategory == catKey,
+                            onClick = { selectedPresetCategory = catKey },
+                            label = { Text(catLabel, fontSize = 12.sp) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = Color(0xFF38BDF8),
+                                selectedLabelColor = Color(0xFF0F172A),
+                                containerColor = Color(0xFF0F172A),
+                                labelColor = Color(0xFF94A3B8)
+                            )
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = PaddingValues(vertical = 4.dp)
+                ) {
+                    items(filteredPresetThemes) { theme ->
+                        val isSelected = !useCustomColor && activeCustomThemeId == null && selectedThemeId == theme.id
+                        ThemeCard(
+                            theme = theme,
+                            isSelected = isSelected,
+                            onClick = {
+                                themeManager.applyPresetTheme(theme.id)
+                                selectedThemeId = theme.id
+                                activeCustomThemeId = null
+                                useCustomColor = false
+                                bgImageUriStr = null
+                                Toast.makeText(context, "${theme.name} প্রয়োগ করা হয়েছে", Toast.LENGTH_SHORT).show()
+                            }
+                        )
+                    }
+                }
+            }
+        }
+
+        // Section 2: Saved Custom Themes & Builder
+        SavedCustomThemesSection(
+            themeManager = themeManager,
+            onOpenCreateDialog = {
+                themeToEdit = null
+                showBuilderDialog = true
+            },
+            onEditTheme = { customTheme ->
+                themeToEdit = customTheme
+                showBuilderDialog = true
+            }
+        )
+
+        // Section 3: Custom Solid Color
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
@@ -678,7 +806,7 @@ fun ThemesTabContent(themeManager: ThemeManager) {
                     Icon(Icons.Default.ColorLens, contentDescription = null, tint = Color(0xFF38BDF8))
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "২. কাস্টম সলিড কালার (Custom Solid Color)",
+                        text = "৩. দ্রুত সলিড কালার (Quick Solid Color)",
                         color = Color.White,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 14.sp
@@ -709,6 +837,8 @@ fun ThemesTabContent(themeManager: ThemeManager) {
                                 .clickable {
                                     useCustomColor = true
                                     themeManager.useCustomColor = true
+                                    themeManager.activeCustomThemeId = null
+                                    activeCustomThemeId = null
                                     customColorInt = colorValue
                                     themeManager.customBgColor = colorValue
                                 },
@@ -728,7 +858,7 @@ fun ThemesTabContent(themeManager: ThemeManager) {
             }
         }
 
-        // Custom Gallery Image Background
+        // Section 4: Custom Gallery Image Background
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
@@ -739,7 +869,7 @@ fun ThemesTabContent(themeManager: ThemeManager) {
                     Icon(Icons.Default.Image, contentDescription = null, tint = Color(0xFF38BDF8))
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "৩. গ্যালারি ব্যাকগ্রাউন্ড ইমেজ (Gallery Image)",
+                        text = "৪. গ্যালারি ব্যাকগ্রাউন্ড ইমেজ (Gallery Image)",
                         color = Color.White,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 14.sp
@@ -769,9 +899,23 @@ fun ThemesTabContent(themeManager: ThemeManager) {
                     }
 
                     if (bgImageUriStr != null) {
+                        Button(
+                            onClick = {
+                                val cropIntent = Intent(context, ImageCropActivity::class.java).apply {
+                                    putExtra(ImageCropActivity.EXTRA_IMAGE_URI, bgImageUriStr)
+                                    data = Uri.parse(bgImageUriStr)
+                                }
+                                cropLauncher.launch(cropIntent)
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0088CC)),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text("ক্রপ / অ্যাডজাস্ট")
+                        }
+
                         OutlinedButton(
                             onClick = {
-                                themeManager.bgImageUriString = null
+                                themeManager.clearCustomBackground(context)
                                 bgImageUriStr = null
                                 Toast.makeText(context, "Image removed", Toast.LENGTH_SHORT).show()
                             },
@@ -833,6 +977,30 @@ fun ThemesTabContent(themeManager: ThemeManager) {
             }
         }
     }
+
+    // Builder Dialog
+    if (showBuilderDialog) {
+        CustomThemeBuilderDialog(
+            initialTheme = themeToEdit,
+            onDismiss = {
+                showBuilderDialog = false
+                themeToEdit = null
+            },
+            onSaveAndApply = { newOrUpdatedTheme ->
+                val repo = CustomThemeRepository(context)
+                repo.saveCustomTheme(newOrUpdatedTheme)
+                themeManager.applyCustomTheme(newOrUpdatedTheme)
+                activeCustomThemeId = newOrUpdatedTheme.id
+                selectedThemeId = "custom_${newOrUpdatedTheme.id}"
+                useCustomColor = false
+                bgImageUriStr = themeManager.bgImageUriString
+                bgOpacity = themeManager.bgImageOpacity
+                showBuilderDialog = false
+                themeToEdit = null
+                Toast.makeText(context, "${newOrUpdatedTheme.name} সংরক্ষিত ও প্রয়োগ করা হয়েছে!", Toast.LENGTH_SHORT).show()
+            }
+        )
+    }
 }
 
 @Composable
@@ -843,85 +1011,102 @@ fun ThemeCard(
 ) {
     Card(
         modifier = Modifier
-            .width(130.dp)
-            .height(160.dp)
+            .width(136.dp)
+            .height(164.dp)
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(theme.backgroundColor)),
+        colors = CardDefaults.cardColors(
+            containerColor = if (theme.isGradient) Color(theme.gradientStartColor) else Color(theme.backgroundColor)
+        ),
         border = if (isSelected) {
             androidx.compose.foundation.BorderStroke(2.dp, Color(0xFF38BDF8))
         } else {
             androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF334155))
         }
     ) {
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(10.dp),
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = theme.name,
-                    color = Color(theme.textColor),
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 12.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                .then(
+                    if (theme.isGradient) {
+                        Modifier.background(
+                            Brush.linearGradient(
+                                listOf(Color(theme.gradientStartColor), Color(theme.gradientEndColor))
+                            )
+                        )
+                    } else Modifier
                 )
-                if (isSelected) {
-                    Icon(
-                        Icons.Default.CheckCircle,
-                        contentDescription = "Selected",
-                        tint = Color(0xFF38BDF8),
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-            }
-
-            // Mini keyboard preview keys
+        ) {
             Column(
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(10.dp),
+                verticalArrangement = Arrangement.SpaceBetween
             ) {
-                Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                    listOf("ক", "খ", "গ").forEach { letter ->
-                        Box(
-                            modifier = Modifier
-                                .size(24.dp)
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(Color(theme.keyColor)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(letter, color = Color(theme.textColor), fontSize = 10.sp)
-                        }
-                    }
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                    listOf("া", "ি", "ী").forEach { letter ->
-                        Box(
-                            modifier = Modifier
-                                .size(24.dp)
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(Color(theme.keyColor)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(letter, color = Color(theme.textColor), fontSize = 10.sp)
-                        }
-                    }
-                }
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(18.dp)
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(Color(theme.actionKeyColor)),
-                    contentAlignment = Alignment.Center
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("UV", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = theme.name,
+                        color = Color(theme.textColor),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+                    if (isSelected) {
+                        Icon(
+                            Icons.Default.CheckCircle,
+                            contentDescription = "Selected",
+                            tint = Color(0xFF38BDF8),
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+
+                // Mini keyboard preview keys
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                        listOf("ক", "খ", "গ").forEach { letter ->
+                            Box(
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .clip(RoundedCornerShape(theme.keyCornerRadius.coerceIn(2f, 8f).dp))
+                                    .background(Color(theme.keyColor).copy(alpha = theme.keyBackgroundOpacity)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(letter, color = Color(theme.textColor), fontSize = 10.sp)
+                            }
+                        }
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                        listOf("া", "ি", "ী").forEach { letter ->
+                            Box(
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .clip(RoundedCornerShape(theme.keyCornerRadius.coerceIn(2f, 8f).dp))
+                                    .background(Color(theme.keyColor).copy(alpha = theme.keyBackgroundOpacity)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(letter, color = Color(theme.textColor), fontSize = 10.sp)
+                            }
+                        }
+                    }
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(18.dp)
+                            .clip(RoundedCornerShape(theme.keyCornerRadius.coerceIn(2f, 6f).dp))
+                            .background(Color(theme.actionKeyColor)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("UV", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
         }

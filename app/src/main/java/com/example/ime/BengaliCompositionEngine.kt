@@ -43,15 +43,15 @@ object BengaliCompositionEngine {
 
         // 2. If incoming is a vowel sign (কার)
         if (BengaliCompositionHelper.isVowelSign(incoming)) {
-            // Check if preceded by hasanta (্)
-            if (prevChar == BengaliCompositionHelper.HASANTA) {
-                // In Bijoy layout, hasanta (G key) + vowel sign can compose into the independent vowel
+            // Check if preceded by hasanta (্) in Bijoy layout ONLY.
+            // In Jatiya layout, independent vowels come strictly from the shifted map / long-press.
+            if (isBijoy && prevChar == BengaliCompositionHelper.HASANTA) {
                 val independent = BengaliCompositionHelper.signToIndependentVowel(incoming)
                 if (independent != null) {
                     return CompositionResult.Replace(1, independent)
                 }
             }
-            // Otherwise, keep as dependent vowel sign (e.g. following a consonant)
+            // Otherwise, keep as dependent vowel sign (e.g. following a consonant or independent keystroke)
             return CompositionResult.Commit(incoming)
         }
 

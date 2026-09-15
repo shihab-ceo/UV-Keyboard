@@ -61,6 +61,32 @@
                 android:background="?android:attr/selectableItemBackgroundBorderless"
                 android:contentDescription="Smart Clipboard" />
 
+            <!-- Live In-Keyboard Translator Button -->
+            <TextView
+                android:id="@+id/btn_translate"
+                android:layout_width="40dp"
+                android:layout_height="38dp"
+                android:gravity="center"
+                android:text="文A"
+                android:textSize="15sp"
+                android:textColor="#94A3B8"
+                android:textStyle="bold"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Live Translator" />
+
+            <!-- Cursor Trackpad Controller Button -->
+            <TextView
+                android:id="@+id/btn_cursor_trackpad"
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:gravity="center"
+                android:text="✥"
+                android:textSize="17sp"
+                android:textColor="#94A3B8"
+                android:textStyle="bold"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Cursor Trackpad" />
+
             <!-- Candidates Container (Horizontal Scroll) -->
             <HorizontalScrollView
                 android:id="@+id/hsv_candidates"
@@ -143,56 +169,19 @@
             </HorizontalScrollView>
         </LinearLayout>
 
-        <!-- Emoji Panel (Shown when emoji button tapped) -->
-        <LinearLayout
-            android:id="@+id/ll_emoji_panel"
+        <!-- Live In-Keyboard Translator Container -->
+        <FrameLayout
+            android:id="@+id/fl_translator_container"
             android:layout_width="match_parent"
-            android:layout_height="180dp"
-            android:orientation="vertical"
-            android:background="#182234"
-            android:padding="6dp"
-            android:visibility="gone">
+            android:layout_height="wrap_content"
+            android:visibility="gone" />
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:paddingBottom="4dp">
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="ইমোজি (Emojis)"
-                    android:textColor="#A855F7"
-                    android:textStyle="bold"
-                    android:textSize="12sp" />
-
-                <TextView
-                    android:id="@+id/btn_close_emoji"
-                    android:layout_width="32dp"
-                    android:layout_height="28dp"
-                    android:gravity="center"
-                    android:text="✕"
-                    android:textColor="#94A3B8"
-                    android:textSize="14sp"
-                    android:background="?android:attr/selectableItemBackgroundBorderless" />
-            </LinearLayout>
-
-            <HorizontalScrollView
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:scrollbars="none">
-
-                <LinearLayout
-                    android:id="@+id/ll_emoji_items"
-                    android:layout_width="wrap_content"
-                    android:layout_height="match_parent"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal" />
-            </HorizontalScrollView>
-        </LinearLayout>
+        <!-- Dedicated Cursor Trackpad Container -->
+        <FrameLayout
+            android:id="@+id/fl_trackpad_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:visibility="gone" />
 
         <!-- Dynamic Keyboard Rows Container -->
         <LinearLayout
@@ -204,4 +193,13 @@
             android:paddingTop="2dp" />
 
     </LinearLayout>
+
+    <!-- Full Keyboard Emoji Panel (Covers entire keyboard layout when visible) -->
+    <FrameLayout
+        android:id="@+id/ll_emoji_panel"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#111827"
+        android:elevation="8dp"
+        android:visibility="gone" />
 </FrameLayout>

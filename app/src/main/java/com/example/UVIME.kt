@@ -2,6 +2,7 @@ package com.example
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.SharedPreferences
 import android.content.res.ColorStateList
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -19,11 +20,14 @@ import android.os.Looper
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import android.text.InputType
 import android.text.TextUtils
 import android.util.TypedValue
+import android.view.ContextThemeWrapper
 import android.view.GestureDetector
 import android.view.Gravity
 import android.view.KeyEvent
+import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
@@ -37,9 +41,11 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.core.graphics.ColorUtils
 import com.example.clipboard.ClipboardItem
+import com.example.clipboard.ClipboardPopupWindow
 import com.example.ime.BengaliEngine
 import com.example.ime.BengaliLayouts
 import com.example.ime.CandidateView
+import com.example.ime.EmojiKeyboardView
 import com.example.ime.KeyType
 import com.example.ime.KeyboardKey
 import com.example.ime.KeyboardLayoutMapper
@@ -47,6 +53,16 @@ import com.example.ime.VoiceInputHelper
 import com.example.ime.suggestion.PersonalLearningStore
 import com.example.ime.suggestion.SuggestionCandidate
 import com.example.ime.suggestion.SuggestionEngine
+import com.example.keyboard.ui.BaseKeyboardView
+import com.example.keyboard.ui.JatiyaKeyboardView
+import com.example.keyboard.ui.BijoyKeyboardView
+import com.example.keyboard.ui.AvroKeyboardView
+import com.example.keyboard.ui.PrabhatKeyboardView
+import com.example.keyboard.ui.EnglishKeyboardView
+import com.example.keyboard.ui.CursorTrackpadView
+import com.example.translator.TranslatorEngine
+import com.example.translator.TranslatorView
+import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -70,12 +86,18 @@ class UVIME : InputMethodService() {
     private var llCandidateBar: LinearLayout? = null
     private var btnSwitchMode: TextView? = null
     private var btnClipboardQuick: TextView? = null
+    private var btnTranslate: TextView? = null
+    private var btnCursorTrackpad: TextView? = null
     private var btnVoiceMic: TextView? = null
     private var llCandidatesContainer: LinearLayout? = null
     private var llClipboardPanel: LinearLayout? = null
     private var llClipboardItems: LinearLayout? = null
-    private var llEmojiPanel: LinearLayout? = null
-    private var llEmojiItems: LinearLayout? = null
+    private var llEmojiPanel: FrameLayout? = null
+    private var emojiKeyboardView: EmojiKeyboardView? = null
+    private var flTranslatorContainer: FrameLayout? = null
+    private var translatorView: TranslatorView? = null
+    private var flTrackpadContainer: FrameLayout? = null
+    private var trackpadView: CursorTrackpadView? = null
     private var llKeyboardRows: LinearLayout? = null
 
     // State
@@ -88,6 +110,10 @@ class UVIME : InputMethodService() {
     private var isBengaliNumbers = false
     private var isEmojiOpen = false
     private var isClipboardOpen = false
+    private var isTranslatorOpen = false
+    private var isTrackpadOpen = false
+    private var lastCommittedTranslationLength = 0
+    private var clipboardPopupWindow: ClipboardPopupWindow? = null
     private val phoneticBuffer = StringBuilder()
     private val currentWordBuffer = StringBuilder()
 
@@ -107,11 +133,22 @@ class UVIME : InputMethodService() {
     private val repeatHandler = Handler(Looper.getMainLooper())
     private var backspaceRunnable: Runnable? = null
 
+    private val themePreferenceListener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
+        if (rootView != null && isInputViewShown) {
+            applyThemeAndBuildKeyboard()
+        }
+    }
+
     override fun onCreate() {
         super.onCreate()
         themeManager = ThemeManager(this)
         clipboardHelper = ClipboardManagerHelper(this)
         clipboardHelper.startListening()
+
+        getSharedPreferences("uv_keyboard_theme_prefs", Context.MODE_PRIVATE)
+            .registerOnSharedPreferenceChangeListener(themePreferenceListener)
+        getSharedPreferences(CustomThemeRepository.PREFS_NAME, Context.MODE_PRIVATE)
+            .registerOnSharedPreferenceChangeListener(themePreferenceListener)
 
         audioManager = getSystemService(Context.AUDIO_SERVICE) as? AudioManager
         vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -125,6 +162,7 @@ class UVIME : InputMethodService() {
         voiceHelper = VoiceInputHelper(
             context = this,
             onTextRecognized = { text ->
+                currentInputConnection?.finishComposingText()
                 currentInputConnection?.commitText(text, 1)
             },
             onListeningStateChanged = { listening ->
@@ -132,6 +170,9 @@ class UVIME : InputMethodService() {
                 if (listening) {
                     Toast.makeText(this, "Listening...", Toast.LENGTH_SHORT).show()
                 }
+            },
+            onPartialRecognized = { partialText ->
+                // Do not commit text during partial results to prevent double-texting
             }
         )
 
@@ -144,86 +185,213 @@ class UVIME : InputMethodService() {
     }
 
     override fun onCreateInputView(): View {
-        val view = layoutInflater.inflate(R.layout.keyboard_view, null)
-        rootView = view
+        return try {
+            val themeWrapper = ContextThemeWrapper(this, R.style.Theme_UVKeyboard)
+            val inflater = LayoutInflater.from(themeWrapper)
+            val view = inflater.inflate(R.layout.keyboard_view, null)
+            rootView = view
 
-        ivBgImage = view.findViewById(R.id.iv_bg_image)
-        vBgOverlay = view.findViewById(R.id.v_bg_overlay)
-        llCandidateBar = view.findViewById(R.id.ll_candidate_bar)
-        btnSwitchMode = view.findViewById(R.id.btn_switch_mode)
-        btnClipboardQuick = view.findViewById(R.id.btn_clipboard_quick)
-        btnVoiceMic = view.findViewById(R.id.btn_voice_mic)
-        llCandidatesContainer = view.findViewById(R.id.ll_candidates_container)
-        llClipboardPanel = view.findViewById(R.id.ll_clipboard_panel)
-        llClipboardItems = view.findViewById(R.id.ll_clipboard_items)
-        llEmojiPanel = view.findViewById(R.id.ll_emoji_panel)
-        llEmojiItems = view.findViewById(R.id.ll_emoji_items)
-        llKeyboardRows = view.findViewById(R.id.ll_keyboard_rows)
+            ivBgImage = view.findViewById(R.id.iv_bg_image)
+            vBgOverlay = view.findViewById(R.id.v_bg_overlay)
+            llCandidateBar = view.findViewById(R.id.ll_candidate_bar)
+            btnSwitchMode = view.findViewById(R.id.btn_switch_mode)
+            btnClipboardQuick = view.findViewById(R.id.btn_clipboard_quick)
+            btnTranslate = view.findViewById(R.id.btn_translate)
+            btnCursorTrackpad = view.findViewById(R.id.btn_cursor_trackpad)
+            btnVoiceMic = view.findViewById(R.id.btn_voice_mic)
+            llCandidatesContainer = view.findViewById(R.id.ll_candidates_container)
+            llClipboardPanel = view.findViewById(R.id.ll_clipboard_panel)
+            llClipboardItems = view.findViewById(R.id.ll_clipboard_items)
+            llEmojiPanel = view.findViewById(R.id.ll_emoji_panel)
+            flTranslatorContainer = view.findViewById(R.id.fl_translator_container)
+            flTrackpadContainer = view.findViewById(R.id.fl_trackpad_container)
+            llKeyboardRows = view.findViewById(R.id.ll_keyboard_rows)
 
-        val btnCloseClipboard = view.findViewById<TextView>(R.id.btn_close_clipboard)
-        btnCloseClipboard?.setOnClickListener {
-            closeClipboardPanel()
-        }
+            btnCursorTrackpad?.setOnClickListener {
+                toggleTrackpad()
+            }
 
-        val btnCloseEmoji = view.findViewById<TextView>(R.id.btn_close_emoji)
-        btnCloseEmoji?.setOnClickListener {
-            closeEmojiPanel()
-        }
+            btnTranslate?.setOnClickListener {
+                toggleTranslator()
+            }
 
-        btnSwitchMode?.setOnClickListener {
-            cycleNextLayoutMode()
-        }
+            val btnCloseClipboard = view.findViewById<TextView>(R.id.btn_close_clipboard)
+            btnCloseClipboard?.setOnClickListener {
+                closeClipboardPanel()
+            }
 
-        btnClipboardQuick?.setOnClickListener {
-            toggleClipboardPanel()
-        }
+            btnSwitchMode?.setOnClickListener {
+                cycleNextLayoutMode()
+            }
 
-        btnVoiceMic?.setOnClickListener {
-            val isBengali = currentMode != ThemeManager.LAYOUT_ENGLISH
-            voiceHelper?.startListening(isBengali)
-        }
+            btnClipboardQuick?.setOnClickListener {
+                toggleClipboardPanel()
+            }
 
-        setupEmojiList()
-        observeClipboardItems()
+            clipboardPopupWindow = ClipboardPopupWindow(this).apply {
+                setTheme(themeManager.getCurrentTheme())
+                onItemPastedListener = {
+                    playKeyFeedback()
+                }
+                onDismissListener = {
+                    isClipboardOpen = false
+                }
+            }
 
-        llCandidatesContainer?.let { container ->
-            candidateViewHelper = CandidateView(this, container) { word ->
-                playKeyFeedback()
-                val ic = currentInputConnection
-                val isAvro = currentMode == ThemeManager.LAYOUT_AVRO
-
-                // Learn selected word if field is safe
-                val isSafe = suggestionEngine.isSafeField(currentInputEditorInfo)
-                val lang = if (suggestionEngine.isBengaliScript(word)) "bn" else "en"
-                learningStore.learnWord(word, lang, isSafe, themeManager.personalLearningEnabled)
-
-                if (isAvro && phoneticBuffer.isNotEmpty()) {
-                    ic?.commitText(word + " ", 1)
-                    phoneticBuffer.clear()
-                } else if (currentWordBuffer.isNotEmpty()) {
-                    ic?.deleteSurroundingText(currentWordBuffer.length, 0)
-                    ic?.commitText(word + " ", 1)
-                    currentWordBuffer.clear()
+            btnVoiceMic?.setOnClickListener {
+                if (voiceHelper?.isListening == true) {
+                    voiceHelper?.stopListening()
                 } else {
-                    ic?.commitText(word + " ", 1)
+                    voiceHelper?.startListeningForLayout(currentMode)
                 }
-                lastAutocorrectOriginal = null
-                lastAutocorrectReplacement = null
-                if (!isCapsLock && isShifted) {
-                    isShifted = false
-                    buildKeyboardRows()
+            }
+
+            setupEmojiList()
+            observeClipboardItems()
+
+            llCandidatesContainer?.let { container ->
+                candidateViewHelper = CandidateView(this, container) { word ->
+                    playKeyFeedback()
+                    val ic = currentInputConnection
+                    val isAvro = currentMode == ThemeManager.LAYOUT_AVRO
+
+                    // Learn selected word if field is safe
+                    val isSafe = suggestionEngine.isSafeField(currentInputEditorInfo)
+                    val lang = if (suggestionEngine.isBengaliScript(word)) "bn" else "en"
+                    learningStore.learnWord(word, lang, isSafe, themeManager.personalLearningEnabled)
+
+                    if (isAvro && phoneticBuffer.isNotEmpty()) {
+                        ic?.commitText(word + " ", 1)
+                        phoneticBuffer.clear()
+                    } else if (currentWordBuffer.isNotEmpty()) {
+                        ic?.deleteSurroundingText(currentWordBuffer.length, 0)
+                        ic?.commitText(word + " ", 1)
+                        currentWordBuffer.clear()
+                    } else {
+                        ic?.commitText(word + " ", 1)
+                    }
+                    lastAutocorrectOriginal = null
+                    lastAutocorrectReplacement = null
+                    if (!isCapsLock && isShifted) {
+                        isShifted = false
+                        buildKeyboardRows()
+                    }
+                    updateCandidates()
                 }
-                updateCandidates()
+            }
+
+            applyThemeAndBuildKeyboard()
+
+            view
+        } catch (t: Throwable) {
+            Log.e("UVIME", "Fatal error inflating keyboard_view in onCreateInputView", t)
+            val fallbackWrapper = ContextThemeWrapper(this, R.style.Theme_UVKeyboard)
+            val fallback = LinearLayout(fallbackWrapper).apply {
+                orientation = LinearLayout.VERTICAL
+                setBackgroundColor(Color.parseColor("#0F172A"))
+                val tv = TextView(fallbackWrapper).apply {
+                    text = "UV Keyboard"
+                    setTextColor(Color.WHITE)
+                    gravity = Gravity.CENTER
+                    setPadding(0, 50, 0, 50)
+                }
+                addView(tv)
+            }
+            rootView = fallback
+            fallback
+        }
+    }
+
+    private fun ensureTranslatorView(): TranslatorView {
+        val existing = translatorView
+        if (existing != null) return existing
+        val themeWrapper = ContextThemeWrapper(this, R.style.Theme_UVKeyboard)
+        val view = TranslatorView(themeWrapper).apply {
+            isTranslateModeActive = false
+            onTranslationReady = { _, translated ->
+                if (isTranslatorOpen && isTranslateModeActive) {
+                    val ic = currentInputConnection
+                    if (ic != null) {
+                        val success = TranslatorEngine.commitSafely(ic, translated, lastCommittedTranslationLength)
+                        if (success) {
+                            lastCommittedTranslationLength = if (translated.isNotEmpty()) translated.length else 0
+                        } else {
+                            lastCommittedTranslationLength = 0
+                        }
+                    }
+                }
+            }
+            onCommitRequested = { translated ->
+                val ic = currentInputConnection
+                if (ic != null) {
+                    try {
+                        if (lastCommittedTranslationLength == 0 && translated.isNotEmpty()) {
+                            ic.commitText(translated + " ", 1)
+                        } else {
+                            ic.commitText(" ", 1)
+                        }
+                    } catch (e: Exception) {
+                        Log.w("UVIME", "Error committing translation", e)
+                    }
+                }
+                lastCommittedTranslationLength = 0
+            }
+            onCloseClicked = {
+                hideTranslator()
             }
         }
+        translatorView = view
+        flTranslatorContainer?.removeAllViews()
+        flTranslatorContainer?.addView(view)
+        return view
+    }
 
-        applyThemeAndBuildKeyboard()
-
+    private fun ensureTrackpadView(): CursorTrackpadView {
+        val existing = trackpadView
+        if (existing != null) return existing
+        val themeWrapper = ContextThemeWrapper(this, R.style.Theme_UVKeyboard)
+        val view = CursorTrackpadView(themeWrapper).apply {
+            inputConnection = currentInputConnection
+            inputConnectionProvider = { currentInputConnection }
+            onCloseClicked = {
+                hideTrackpad()
+            }
+        }
+        trackpadView = view
+        flTrackpadContainer?.removeAllViews()
+        flTrackpadContainer?.addView(view)
         return view
     }
 
     override fun onStartInputView(info: EditorInfo?, restarting: Boolean) {
         super.onStartInputView(info, restarting)
+
+        // Ensure main keyboard root view layout retains VISIBLE status at all times
+        rootView?.visibility = View.VISIBLE
+        trackpadView?.inputConnection = currentInputConnection
+        trackpadView?.inputConnectionProvider = { currentInputConnection }
+
+        if (!isTranslatorOpen) {
+            translatorView?.isTranslateModeActive = false
+            flTranslatorContainer?.visibility = View.GONE
+        }
+
+        if (restarting) {
+            // Rapid emoji insertions in messaging apps (WhatsApp, Messenger) trigger onStartInputView with restarting = true.
+            // Do NOT reset emoji panel or blank out the keyboard during active emoji sessions!
+            emojiKeyboardView?.inputConnection = currentInputConnection
+            if (isEmojiOpen) {
+                llKeyboardRows?.visibility = View.GONE
+                llEmojiPanel?.visibility = View.VISIBLE
+                return
+            }
+            if (isClipboardOpen) {
+                llKeyboardRows?.visibility = View.GONE
+                llClipboardPanel?.visibility = View.VISIBLE
+                return
+            }
+        }
+
         phoneticBuffer.clear()
         currentWordBuffer.clear()
         currentCandidates = emptyList()
@@ -238,6 +406,7 @@ class UVIME : InputMethodService() {
         isEmojiOpen = false
         llClipboardPanel?.visibility = View.GONE
         llEmojiPanel?.visibility = View.GONE
+        llKeyboardRows?.visibility = View.VISIBLE
 
         // Refresh theme in case user changed it in Settings
         applyThemeAndBuildKeyboard()
@@ -253,13 +422,31 @@ class UVIME : InputMethodService() {
 
     override fun onDestroy() {
         super.onDestroy()
+        getSharedPreferences("uv_keyboard_theme_prefs", Context.MODE_PRIVATE)
+            .unregisterOnSharedPreferenceChangeListener(themePreferenceListener)
+        getSharedPreferences(CustomThemeRepository.PREFS_NAME, Context.MODE_PRIVATE)
+            .unregisterOnSharedPreferenceChangeListener(themePreferenceListener)
+        clipboardPopupWindow?.onDestroy()
         clipboardHelper.stopListening()
         voiceHelper?.stopListening()
+        translatorView?.onDestroy()
         serviceScope.cancel()
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
         if (isInputViewShown) {
+            if (keyCode == KeyEvent.KEYCODE_BACK && isTrackpadOpen) {
+                hideTrackpad()
+                return true
+            }
+            if (keyCode == KeyEvent.KEYCODE_BACK && isTranslatorOpen) {
+                hideTranslator()
+                return true
+            }
+            if (keyCode == KeyEvent.KEYCODE_BACK && isEmojiOpen) {
+                closeEmojiPanel()
+                return true
+            }
             val ic = currentInputConnection
             when (keyCode) {
                 KeyEvent.KEYCODE_VOLUME_UP -> {
@@ -324,18 +511,22 @@ class UVIME : InputMethodService() {
 
     private fun toggleClipboardPanel() {
         playKeyFeedback()
-        if (isClipboardOpen) {
+        val anchor = rootView ?: return
+        if (clipboardPopupWindow?.isShowing() == true) {
             closeClipboardPanel()
         } else {
             closeEmojiPanel()
+            if (isTrackpadOpen) hideTrackpad()
             isClipboardOpen = true
-            llClipboardPanel?.visibility = View.VISIBLE
+            clipboardPopupWindow?.setTheme(themeManager.getCurrentTheme())
+            clipboardPopupWindow?.show(anchor, currentInputConnection)
         }
     }
 
     private fun closeClipboardPanel() {
         isClipboardOpen = false
         llClipboardPanel?.visibility = View.GONE
+        clipboardPopupWindow?.dismiss()
     }
 
     private fun toggleEmojiPanel() {
@@ -344,14 +535,81 @@ class UVIME : InputMethodService() {
             closeEmojiPanel()
         } else {
             closeClipboardPanel()
+            if (isTrackpadOpen) hideTrackpad()
             isEmojiOpen = true
+            emojiKeyboardView?.inputConnection = currentInputConnection
+            rootView?.visibility = View.VISIBLE
+            llKeyboardRows?.visibility = View.GONE
             llEmojiPanel?.visibility = View.VISIBLE
         }
     }
 
     private fun closeEmojiPanel() {
         isEmojiOpen = false
+        rootView?.visibility = View.VISIBLE
         llEmojiPanel?.visibility = View.GONE
+        llKeyboardRows?.visibility = View.VISIBLE
+    }
+
+    private fun toggleTranslator() {
+        playKeyFeedback()
+        if (isTranslatorOpen) {
+            hideTranslator()
+        } else {
+            showTranslator()
+        }
+    }
+
+    private fun showTranslator() {
+        if (isClipboardOpen) closeClipboardPanel()
+        if (isEmojiOpen) closeEmojiPanel()
+        if (isTrackpadOpen) hideTrackpad()
+        isTranslatorOpen = true
+        btnTranslate?.setTextColor(android.graphics.Color.parseColor("#38BDF8"))
+        val trans = ensureTranslatorView()
+        trans.isTranslateModeActive = true
+        flTranslatorContainer?.visibility = View.VISIBLE
+        lastCommittedTranslationLength = 0
+    }
+
+    private fun hideTranslator() {
+        isTranslatorOpen = false
+        translatorView?.isTranslateModeActive = false
+        val theme = themeManager.getCurrentTheme()
+        btnTranslate?.setTextColor(theme.textColor)
+        flTranslatorContainer?.visibility = View.GONE
+        lastCommittedTranslationLength = 0
+        translatorView?.clearInput()
+    }
+
+    private fun toggleTrackpad() {
+        playKeyFeedback()
+        if (isTrackpadOpen) {
+            hideTrackpad()
+        } else {
+            showTrackpad()
+        }
+    }
+
+    private fun showTrackpad() {
+        if (isClipboardOpen) closeClipboardPanel()
+        if (isEmojiOpen) closeEmojiPanel()
+        if (isTranslatorOpen) hideTranslator()
+        isTrackpadOpen = true
+        btnCursorTrackpad?.setTextColor(android.graphics.Color.parseColor("#38BDF8"))
+        val trackpad = ensureTrackpadView()
+        trackpad.inputConnection = currentInputConnection
+        trackpad.inputConnectionProvider = { currentInputConnection }
+        flTrackpadContainer?.visibility = View.VISIBLE
+        llKeyboardRows?.visibility = View.GONE
+    }
+
+    private fun hideTrackpad() {
+        isTrackpadOpen = false
+        val theme = themeManager.getCurrentTheme()
+        btnCursorTrackpad?.setTextColor(theme.textColor)
+        flTrackpadContainer?.visibility = View.GONE
+        llKeyboardRows?.visibility = View.VISIBLE
     }
 
     private var lastKnownRecentClip: String? = null
@@ -450,24 +708,27 @@ class UVIME : InputMethodService() {
     }
 
     private fun setupEmojiList() {
-        val container = llEmojiItems ?: return
+        val container = llEmojiPanel ?: return
         container.removeAllViews()
-
-        val theme = themeManager.getCurrentTheme()
-        BengaliLayouts.EMOJIS.forEach { emoji ->
-            val btn = TextView(this).apply {
-                text = emoji
-                textSize = 24f
-                gravity = Gravity.CENTER
-                setPadding(16, 12, 16, 12)
-                background = createKeyRippleDrawable(theme.keyColor, theme.keyPressedColor)
-                setOnClickListener {
-                    playKeyFeedback()
-                    currentInputConnection?.commitText(emoji, 1)
-                }
+        emojiKeyboardView = EmojiKeyboardView(this).apply {
+            inputConnection = currentInputConnection
+            onEmojiSelected = { _ ->
+                playKeyFeedback()
+                rootView?.visibility = View.VISIBLE
+                llEmojiPanel?.visibility = View.VISIBLE
+                inputConnection = currentInputConnection
             }
-            container.addView(btn)
+            onBackspace = {
+                playKeyFeedback()
+                rootView?.visibility = View.VISIBLE
+                handleKeyInput(KeyboardKey(label = "⌫", output = "", type = KeyType.BACKSPACE))
+            }
+            onCloseEmoji = {
+                playKeyFeedback()
+                closeEmojiPanel()
+            }
         }
+        container.addView(emojiKeyboardView)
     }
 
     private fun updateCandidates() {
@@ -534,9 +795,31 @@ class UVIME : InputMethodService() {
         }
     }
 
+    private fun isMultiLineField(info: EditorInfo?): Boolean {
+        if (info == null) return false
+        val isMultiLineFlag = (info.inputType and InputType.TYPE_TEXT_FLAG_MULTI_LINE) != 0
+        val isImeNoEnter = (info.inputType and InputType.TYPE_TEXT_FLAG_IME_MULTI_LINE) != 0
+        val isVariationsMultiLine = when (info.inputType and InputType.TYPE_MASK_VARIATION) {
+            InputType.TYPE_TEXT_VARIATION_LONG_MESSAGE,
+            InputType.TYPE_TEXT_VARIATION_POSTAL_ADDRESS -> true
+            else -> false
+        }
+        return isMultiLineFlag || isImeNoEnter || isVariationsMultiLine
+    }
+
     private fun getDynamicActionIcon(): String {
         val info = currentInputEditorInfo ?: return "↵"
-        return when (info.imeOptions and EditorInfo.IME_MASK_ACTION) {
+        val inputType = info.inputType
+
+        // ENTER KEY UI/ICON LOGIC: If (inputType and InputType.TYPE_TEXT_FLAG_MULTI_LINE) != 0,
+        // ALWAYS display the standard "Return/Enter Arrow" icon ("↵").
+        // Ignore IME_ACTION_DONE, IME_ACTION_SEND, or IME_ACTION_NONE for multi-line fields.
+        if ((inputType and InputType.TYPE_TEXT_FLAG_MULTI_LINE) != 0 || isMultiLineField(info)) {
+            return "↵"
+        }
+
+        val actionId = info.imeOptions and EditorInfo.IME_MASK_ACTION
+        return when (actionId) {
             EditorInfo.IME_ACTION_SEARCH -> "🔍"
             EditorInfo.IME_ACTION_GO -> "➔"
             EditorInfo.IME_ACTION_SEND -> "📤"
@@ -549,13 +832,29 @@ class UVIME : InputMethodService() {
     private fun performDynamicAction() {
         val ic = currentInputConnection ?: return
         val info = currentInputEditorInfo
-        val action = (info?.imeOptions ?: 0) and EditorInfo.IME_MASK_ACTION
-        if (action != EditorInfo.IME_ACTION_NONE && action != EditorInfo.IME_ACTION_UNSPECIFIED) {
-            ic.performEditorAction(action)
+        val inputType = info?.inputType ?: 0
+
+        // Rule 1: If it IS a MULTI-LINE field, force insert a new line: currentInputConnection.commitText("\n", 1)
+        // and consume the event. DO NOT call performEditorAction() (so users can write multi-line paragraphs in WhatsApp/Messenger).
+        if ((inputType and InputType.TYPE_TEXT_FLAG_MULTI_LINE) != 0 || isMultiLineField(info)) {
+            ic.commitText("\n", 1)
+            if (!isCapsLock && currentMode == ThemeManager.LAYOUT_ENGLISH) {
+                isShifted = true
+                buildKeyboardRows()
+            }
+            return
+        }
+
+        // Rule 2: If it is a SINGLE-LINE field (like a web browser search bar), execute the corresponding
+        // action via currentInputConnection.performEditorAction(actionId).
+        val imeOptions = info?.imeOptions ?: 0
+        val actionId = imeOptions and EditorInfo.IME_MASK_ACTION
+        if (actionId != EditorInfo.IME_ACTION_NONE && actionId != EditorInfo.IME_ACTION_UNSPECIFIED) {
+            ic.performEditorAction(actionId)
         } else {
             ic.commitText("\n", 1)
         }
-        if (!isCapsLock) {
+        if (!isCapsLock && currentMode == ThemeManager.LAYOUT_ENGLISH) {
             isShifted = true
             buildKeyboardRows()
         }
@@ -570,6 +869,8 @@ class UVIME : InputMethodService() {
         btnSwitchMode?.contentDescription = "Switch Keyboard Layout (Current: $currentMode)"
         btnSwitchMode?.setTextColor(theme.accentColor)
         btnClipboardQuick?.setTextColor(theme.textColor)
+        btnTranslate?.setTextColor(if (isTranslatorOpen) android.graphics.Color.parseColor("#38BDF8") else theme.textColor)
+        btnCursorTrackpad?.setTextColor(if (isTrackpadOpen) android.graphics.Color.parseColor("#38BDF8") else theme.textColor)
         btnVoiceMic?.setTextColor(theme.textColor)
 
         // Custom Background Gallery Image
@@ -646,6 +947,126 @@ class UVIME : InputMethodService() {
 
         val baseRowHeight = (46 * heightScale).toInt()
 
+        // When not in symbols mode, dynamically render our custom Canvas-based keyboard views
+        // for ALL layouts (Jatiya, Bijoy, Avro, Prabhat, English) ensuring 100% theme property inheritance!
+        if (!isSymbols) {
+            val totalRows = 4
+            val keyboardHeightDp = (baseRowHeight * totalRows)
+            val keyboardHeightPx = TypedValue.applyDimension(
+                TypedValue.COMPLEX_UNIT_DIP,
+                keyboardHeightDp.toFloat(),
+                resources.displayMetrics
+            ).toInt()
+
+            val canvasKeyboardView: BaseKeyboardView = when (currentMode) {
+                ThemeManager.LAYOUT_JATIYA -> JatiyaKeyboardView(this)
+                ThemeManager.LAYOUT_BIJOY -> BijoyKeyboardView(this)
+                ThemeManager.LAYOUT_AVRO -> AvroKeyboardView(this)
+                ThemeManager.LAYOUT_PRABHAT -> PrabhatKeyboardView(this)
+                ThemeManager.LAYOUT_ENGLISH -> EnglishKeyboardView(this)
+                else -> JatiyaKeyboardView(this)
+            }
+
+            canvasKeyboardView.apply {
+                layoutParams = LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    keyboardHeightPx
+                )
+                this.applyTheme(theme)
+                this.isShifted = this@UVIME.isShifted
+                this.isCapsLock = this@UVIME.isCapsLock
+                this.enterActionIcon = getDynamicActionIcon()
+                this.onKeyCommitListener = { output ->
+                    playKeyFeedback()
+                    if (isTranslatorOpen) {
+                        translatorView?.appendInputText(output)
+                    } else {
+                        val ic = currentInputConnection
+                        ic?.commitText(output, 1)
+                        currentWordBuffer.append(output)
+                        updateCandidates()
+                    }
+                }
+                this.onBackspaceListener = {
+                    playKeyFeedback()
+                    if (isTranslatorOpen) {
+                        translatorView?.deleteLastChar()
+                    } else {
+                        handleKeyInput(KeyboardKey(label = "⌫", output = "", type = KeyType.BACKSPACE))
+                    }
+                }
+                this.onEnterListener = {
+                    playKeyFeedback()
+                    if (isTranslatorOpen) {
+                        translatorView?.commitCurrentTranslation()
+                    } else {
+                        performDynamicAction()
+                    }
+                }
+                this.onSpaceListener = {
+                    playKeyFeedback()
+                    if (isTranslatorOpen) {
+                        translatorView?.appendInputText(" ")
+                    } else {
+                        handleKeyInput(KeyboardKey(label = " ", output = " ", type = KeyType.SPACE))
+                    }
+                }
+                this.onShiftToggleListener = { shifted ->
+                    playKeyFeedback()
+                    this@UVIME.isShifted = shifted
+                }
+                this.onSpacebarSwipeNextListener = {
+                    playKeyFeedback()
+                    cycleNextLayoutMode()
+                }
+                this.onSpacebarSwipePrevListener = {
+                    playKeyFeedback()
+                    cyclePreviousLayoutMode()
+                }
+                this.onSymbolsToggleListener = {
+                    playKeyFeedback()
+                    isSymbols = !isSymbols
+                    buildKeyboardRows()
+                }
+                this.onEmojiToggleListener = {
+                    playKeyFeedback()
+                    toggleEmojiPanel()
+                }
+                this.onSettingsHintListener = {
+                    playKeyFeedback()
+                    try {
+                        val intent = android.content.Intent(this@UVIME, MainActivity::class.java).apply {
+                            flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                        }
+                        startActivity(intent)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+            }
+
+            // Adjust root wrapper height
+            val candidateBarHeightDp = 44
+            val totalHeightDp = candidateBarHeightDp + keyboardHeightDp + 8
+            val totalHeightPx = TypedValue.applyDimension(
+                TypedValue.COMPLEX_UNIT_DIP,
+                totalHeightDp.toFloat(),
+                resources.displayMetrics
+            ).toInt()
+
+            rootView?.findViewById<View>(R.id.fl_keyboard_wrapper)?.let { wrapper ->
+                val lp = wrapper.layoutParams ?: ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    totalHeightPx
+                )
+                lp.height = totalHeightPx
+                wrapper.layoutParams = lp
+            }
+
+            rowsContainer.addView(canvasKeyboardView)
+            return
+        }
+
         // Programmatically adjust the total height of the root keyboard layout view based on user preference
         val candidateBarHeightDp = 44
         val totalHeightDp = candidateBarHeightDp + (baseRowHeight * rowDataList.size) + 8
@@ -706,7 +1127,7 @@ class UVIME : InputMethodService() {
         }
 
         val keyBgColor = when (key.type) {
-            KeyType.SHIFT -> if (isShifted || isCapsLock) theme.accentColor else theme.actionKeyColor
+            KeyType.SHIFT -> theme.accentColor
             KeyType.ENTER -> theme.actionKeyColor
             KeyType.BACKSPACE, KeyType.SWITCH_MODE, KeyType.SWITCH_SYMBOLS, KeyType.SWITCH_EMOJI ->
                 theme.actionKeyColor
@@ -714,18 +1135,31 @@ class UVIME : InputMethodService() {
             else -> theme.keyColor
         }
 
+        // Apply opacity transparency to normal keys
+        val keyAlpha = (theme.keyBackgroundOpacity.coerceIn(0.10f, 1.0f) * 255).toInt()
+        val finalBgColor = if (key.type == KeyType.NORMAL || key.type == KeyType.SPACE) {
+            ColorUtils.setAlphaComponent(keyBgColor, keyAlpha)
+        } else {
+            keyBgColor
+        }
+
         val keyTextColor = when {
-            key.type == KeyType.SHIFT && (isShifted || isCapsLock) -> theme.backgroundColor
+            key.type == KeyType.SHIFT -> {
+                val lum = (Color.red(theme.accentColor) * 0.299 +
+                        Color.green(theme.accentColor) * 0.587 +
+                        Color.blue(theme.accentColor) * 0.114) / 255.0
+                if (lum < 0.55) Color.WHITE else Color.parseColor("#0F172A")
+            }
             key.type == KeyType.ENTER -> if (!theme.isDark) Color.WHITE else ColorUtils.setAlphaComponent(theme.textColor, 255)
             else -> theme.textColor
         }
 
         val strokeColor = if (!theme.isDark && key.type == KeyType.NORMAL) Color.parseColor("#CBD5E1") else 0
-        container.background = createKeyRippleDrawable(keyBgColor, theme.keyPressedColor, strokeColor)
+        container.background = createKeyRippleDrawable(finalBgColor, theme.keyPressedColor, strokeColor, theme.keyCornerRadius)
 
         // Main key label
         val mainLabel = TextView(this).apply {
-            val labelText = when (key.type) {
+            val rawLabelText = when (key.type) {
                 KeyType.SPACE -> when (currentMode) {
                     ThemeManager.LAYOUT_JATIYA -> "◀  জাতীয়  ▶"
                     ThemeManager.LAYOUT_AVRO -> "◀  Avro  ▶"
@@ -733,14 +1167,14 @@ class UVIME : InputMethodService() {
                     ThemeManager.LAYOUT_PRABHAT -> "◀  Prabhat  ▶"
                     else -> "◀  English  ▶"
                 }
-                KeyType.SHIFT -> if (isCapsLock) "⇪" else "⬆"
+                KeyType.SHIFT -> if (currentMode == ThemeManager.LAYOUT_JATIYA || currentMode == ThemeManager.LAYOUT_BIJOY) "⬆" else if (isCapsLock) "⇪" else "⬆"
                 KeyType.ENTER -> getDynamicActionIcon()
                 KeyType.NORMAL -> if (isShifted || isCapsLock) {
                     if (key.shiftOutput.isNotEmpty()) key.shiftOutput else key.label
                 } else key.label
                 else -> key.label
             }
-            text = labelText
+            text = com.example.ime.BengaliCompositionHelper.stripDottedCircle(rawLabelText)
             setTextColor(keyTextColor)
             textSize = when (key.type) {
                 KeyType.SPACE -> (13f * fontScale).coerceIn(11f, 26f)
@@ -757,10 +1191,10 @@ class UVIME : InputMethodService() {
         }
         container.addView(mainLabel)
 
-        // Sublabel / hint label if exists and normal mode
+        // Sublabel / hint label if exists and normal mode (positioned at top-right corner)
         if (key.hint != null && !isShifted && !isCapsLock && key.type == KeyType.NORMAL) {
             val hintLabel = TextView(this).apply {
-                text = key.hint
+                text = com.example.ime.BengaliCompositionHelper.stripDottedCircle(key.hint)
                 setTextColor(theme.sublabelColor)
                 textSize = (10f * fontScale).coerceIn(8f, 18f)
                 gravity = Gravity.END or Gravity.TOP
@@ -886,8 +1320,36 @@ class UVIME : InputMethodService() {
                         phoneticBuffer.append(targetChar)
                         updateCandidates()
                     } else {
-                        ic?.commitText(targetChar, 1)
-                        if (currentMode != ThemeManager.LAYOUT_AVRO) {
+                        val isBengaliLayout = (currentMode == ThemeManager.LAYOUT_JATIYA ||
+                                               currentMode == ThemeManager.LAYOUT_BIJOY ||
+                                               currentMode == ThemeManager.LAYOUT_PRABHAT)
+                        if (isBengaliLayout && ic != null) {
+                            val prevChar = currentWordBuffer.lastOrNull()?.toString()
+                                ?: ic.getTextBeforeCursor(1, 0)?.toString()
+                            val compResult = com.example.ime.BengaliCompositionEngine.processInput(
+                                incoming = targetChar,
+                                prevChar = prevChar,
+                                isBijoy = (currentMode == ThemeManager.LAYOUT_BIJOY)
+                            )
+                            when (compResult) {
+                                is com.example.ime.CompositionResult.Replace -> {
+                                    ic.deleteSurroundingText(compResult.charsToDelete, 0)
+                                    ic.commitText(compResult.replacement, 1)
+                                    if (currentWordBuffer.length >= compResult.charsToDelete) {
+                                        currentWordBuffer.delete(
+                                            currentWordBuffer.length - compResult.charsToDelete,
+                                            currentWordBuffer.length
+                                        )
+                                    }
+                                    currentWordBuffer.append(compResult.replacement)
+                                }
+                                is com.example.ime.CompositionResult.Commit -> {
+                                    ic.commitText(compResult.text, 1)
+                                    currentWordBuffer.append(compResult.text)
+                                }
+                            }
+                        } else {
+                            ic?.commitText(targetChar, 1)
                             currentWordBuffer.append(targetChar)
                         }
                         updateCandidates()
@@ -1147,8 +1609,11 @@ class UVIME : InputMethodService() {
                 toggleClipboardPanel()
             }
             KeyType.VOICE -> {
-                val isBengali = currentMode != ThemeManager.LAYOUT_ENGLISH
-                voiceHelper?.startListening(isBengali)
+                if (voiceHelper?.isListening == true) {
+                    voiceHelper?.stopListening()
+                } else {
+                    voiceHelper?.startListeningForLayout(currentMode)
+                }
             }
         }
     }
@@ -1195,16 +1660,26 @@ class UVIME : InputMethodService() {
         }
     }
 
-    private fun createKeyRippleDrawable(normalColor: Int, pressedColor: Int, strokeColor: Int = 0): RippleDrawable {
+    private fun createKeyRippleDrawable(
+        normalColor: Int,
+        pressedColor: Int,
+        strokeColor: Int = 0,
+        cornerRadiusDp: Float = 14f
+    ): RippleDrawable {
+        val radiusPx = TypedValue.applyDimension(
+            TypedValue.COMPLEX_UNIT_DIP,
+            cornerRadiusDp.coerceIn(0f, 24f),
+            resources.displayMetrics
+        )
         val normalDrawable = GradientDrawable().apply {
-            cornerRadius = 14f
+            cornerRadius = radiusPx
             setColor(normalColor)
             if (strokeColor != 0) {
                 setStroke(1, strokeColor)
             }
         }
         val maskDrawable = GradientDrawable().apply {
-            cornerRadius = 14f
+            cornerRadius = radiusPx
             setColor(android.graphics.Color.WHITE)
         }
         return RippleDrawable(

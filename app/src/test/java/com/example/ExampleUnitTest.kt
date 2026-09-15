@@ -1,9 +1,14 @@
 package com.example
 
 import com.example.ime.BengaliEngine
+import com.example.ime.BengaliCompositionEngine
+import com.example.ime.BengaliCompositionHelper
 import com.example.ime.BengaliLayouts
 import com.example.ime.BijoyLayoutMap
+import com.example.ime.CompositionResult
+import com.example.ime.JatiyaLayoutEngine
 import com.example.ime.JatiyaLayoutMap
+import com.example.ime.KeyType
 import com.example.ime.PrabhatLayoutMap
 import org.junit.Assert.*
 import org.junit.Test
@@ -18,19 +23,19 @@ class ExampleUnitTest {
   fun testJatiyaLayout_Row2Key3() {
     val rows = JatiyaLayoutMap.getRows()
     val row2 = rows[1]
-    val key3 = row2[2] // Index 2 is Key 3
+    val key3 = row2[2] // Index 2 is Key 3: [ ূ ], [ ু ], [ ি ]
     assertEquals("ি", key3.label)
     assertEquals("ি", key3.output)
-    assertEquals("ী", key3.hint)
-    assertEquals("ী", key3.shiftOutput)
+    assertEquals("ঈ", key3.hint)
+    assertEquals("ঈ", key3.shiftOutput)
   }
 
   @Test
   fun testJatiyaLayout_Row3Key4() {
     val rows = JatiyaLayoutMap.getRows()
     val row3 = rows[2]
-    // Row 3 keys: [Shift, ো, ে, র, ...]
-    val key4 = row3[3] // Index 3 is Key 4 (after Shift, ো, ে)
+    // Row 3 keys: [Shift, ৌ, ো, ে, র, ন, স, ম, Backspace]
+    val key4 = row3[4] // Index 4 in row3 is 'র' (Shift: 'ল')
     assertEquals("র", key4.label)
     assertEquals("র", key4.output)
     assertEquals("ল", key4.hint)
@@ -41,38 +46,50 @@ class ExampleUnitTest {
   fun testJatiyaLayout_Row1FixedBugs() {
     val rows = JatiyaLayoutMap.getRows()
     val row1 = rows[0]
-    // E key: ড with shift ঢ (previously duplicate ট)
+    // Row 1: [ ঙ ]  [ য ]  [ ড ]  [ প ]  [ ট ]  [ চ ]  [ জ ]  [ হ ]  [ গ ]  [ ড় ]
+    assertEquals(10, row1.size)
+    // ড with shift ঢ
     assertEquals("ড", row1[2].output)
     assertEquals("ঢ", row1[2].shiftOutput)
-    // U key: জ with shift ঝ (previously duplicate ব)
+    // জ with shift ঝ
     assertEquals("জ", row1[6].output)
     assertEquals("ঝ", row1[6].shiftOutput)
+    // ড় with shift ঢ়
+    assertEquals("ড়", row1[9].output)
+    assertEquals("ঢ়", row1[9].shiftOutput)
   }
 
   @Test
-  fun testJatiyaLayout_Row2FixedBugs() {
+  fun testJatiyaLayout_Row2ExactMapping() {
     val rows = JatiyaLayoutMap.getRows()
     val row2 = rows[1]
-    // Key 1: ৃ with shift ঋ (previously '<')
-    assertEquals("ৃ", row2[0].output)
-    assertEquals("ঋ", row2[0].shiftOutput)
-    // Key 2: ু with shift ূ (previously digit zero '০')
-    assertEquals("ু", row2[1].output)
-    assertEquals("ূ", row2[1].shiftOutput)
-    // Key 5: virama ্ with shift ৎ
-    assertEquals("্", row2[4].output)
-    assertEquals("ৎ", row2[4].shiftOutput)
+    // Row 2: [ ূ ]  [ ু ]  [ ি ]  [ ব ]  [ ্ ]  [ া ]  [ ক ]  [ ত ]  [ দ ]
+    // Shift: [ ঋ ]  [ ঊ ]  [ ঈ ]  [ ভ ]  [ ্ ]  [ আ ]  [ খ ]  [ থ ]  [ ধ ]
+    assertEquals(9, row2.size)
+    val expectedMain = listOf("ূ", "ু", "ি", "ব", "্", "া", "ক", "ত", "দ")
+    val expectedShift = listOf("ঋ", "ঊ", "ঈ", "ভ", "্", "আ", "খ", "থ", "ধ")
+    expectedMain.forEachIndexed { i, char ->
+      assertEquals(char, row2[i].output)
+      assertEquals(expectedShift[i], row2[i].shiftOutput)
+    }
   }
 
   @Test
-  fun testJatiyaLayout_Row3AllVowelsPresent() {
+  fun testJatiyaLayout_Row3ExactMapping_NoDuplicates() {
     val rows = JatiyaLayoutMap.getRows()
     val row3 = rows[2]
-    // Verify ৈ (ঐ) and ৌ (ঔ) are present
-    assertEquals("ৈ", row3[7].output)
-    assertEquals("ঐ", row3[7].shiftOutput)
-    assertEquals("ৌ", row3[8].output)
-    assertEquals("ঔ", row3[8].shiftOutput)
+    // Row 3: Shift + [ ৌ ]  [ ো ]  [ ে ]  [ র ]  [ ন ]  [ স ]  [ ম ] + Backspace
+    assertEquals(9, row3.size)
+    assertEquals(KeyType.SHIFT, row3[0].type)
+    assertEquals(KeyType.BACKSPACE, row3[8].type)
+
+    val charKeys = row3.subList(1, 8)
+    val expectedMain = listOf("ৌ", "ো", "ে", "র", "ন", "স", "ম")
+    val expectedShift = listOf("ঔ", "ও", "এ", "ল", "ণ", "ষ", "শ")
+    charKeys.forEachIndexed { i, key ->
+      assertEquals(expectedMain[i], key.output)
+      assertEquals(expectedShift[i], key.shiftOutput)
+    }
   }
 
   @Test
@@ -140,7 +157,8 @@ class ExampleUnitTest {
   fun testBengaliLayouts_Delegation() {
     val jatiyaRows = BengaliLayouts.getJatiyaRows()
     assertEquals("ি", jatiyaRows[1][2].label)
-    assertEquals("র", jatiyaRows[2][3].label)
+    // Row 3: [Shift, ৌ, ো, ে, র, ...] -> index 4 is 'র'
+    assertEquals("র", jatiyaRows[2][4].label)
 
     val bijoyRows = BengaliLayouts.getBijoyRows()
     assertEquals("ব", bijoyRows[2][4].label)
@@ -317,6 +335,157 @@ class ExampleUnitTest {
     assertEquals("ধ", BengaliEngine.transliterate("Dh"))
     assertEquals("ফ", BengaliEngine.transliterate("ph"))
     assertEquals("ভ", BengaliEngine.transliterate("bh"))
+  }
+
+  @Test
+  fun testJatiyaLayoutEngine_ExactPositionMappings() {
+    // Row 1 Unshifted & Shifted
+    assertEquals("ঙ", JatiyaLayoutEngine.getJatiyaChar('q', isShifted = false))
+    assertEquals("ং", JatiyaLayoutEngine.getJatiyaChar('q', isShifted = true))
+    assertEquals("ড়", JatiyaLayoutEngine.getJatiyaChar('p', isShifted = false))
+    assertEquals("ঢ়", JatiyaLayoutEngine.getJatiyaChar('p', isShifted = true))
+
+    // Row 2 Unshifted & Shifted (Independent Vowels strictly from shifted keys)
+    assertEquals("ূ", JatiyaLayoutEngine.getJatiyaChar('a', isShifted = false))
+    assertEquals("ঋ", JatiyaLayoutEngine.getJatiyaChar('a', isShifted = true))
+    assertEquals("ু", JatiyaLayoutEngine.getJatiyaChar('s', isShifted = false))
+    assertEquals("ঊ", JatiyaLayoutEngine.getJatiyaChar('s', isShifted = true))
+    assertEquals("ি", JatiyaLayoutEngine.getJatiyaChar('d', isShifted = false))
+    assertEquals("ঈ", JatiyaLayoutEngine.getJatiyaChar('d', isShifted = true))
+    assertEquals("ব", JatiyaLayoutEngine.getJatiyaChar('f', isShifted = false))
+    assertEquals("ভ", JatiyaLayoutEngine.getJatiyaChar('f', isShifted = true))
+    assertEquals("্", JatiyaLayoutEngine.getJatiyaChar('g', isShifted = false))
+    assertEquals("্", JatiyaLayoutEngine.getJatiyaChar('g', isShifted = true))
+    assertEquals("া", JatiyaLayoutEngine.getJatiyaChar('h', isShifted = false))
+    assertEquals("আ", JatiyaLayoutEngine.getJatiyaChar('h', isShifted = true))
+    assertEquals("ক", JatiyaLayoutEngine.getJatiyaChar('j', isShifted = false))
+    assertEquals("খ", JatiyaLayoutEngine.getJatiyaChar('j', isShifted = true))
+    assertEquals("ত", JatiyaLayoutEngine.getJatiyaChar('k', isShifted = false))
+    assertEquals("থ", JatiyaLayoutEngine.getJatiyaChar('k', isShifted = true))
+    assertEquals("দ", JatiyaLayoutEngine.getJatiyaChar('l', isShifted = false))
+    assertEquals("ধ", JatiyaLayoutEngine.getJatiyaChar('l', isShifted = true))
+
+    // Row 3 Unshifted & Shifted
+    assertEquals("ৌ", JatiyaLayoutEngine.getJatiyaChar('z', isShifted = false))
+    assertEquals("ঔ", JatiyaLayoutEngine.getJatiyaChar('z', isShifted = true))
+    assertEquals("ো", JatiyaLayoutEngine.getJatiyaChar('x', isShifted = false))
+    assertEquals("ও", JatiyaLayoutEngine.getJatiyaChar('x', isShifted = true))
+    assertEquals("ে", JatiyaLayoutEngine.getJatiyaChar('c', isShifted = false))
+    assertEquals("এ", JatiyaLayoutEngine.getJatiyaChar('c', isShifted = true))
+    assertEquals("র", JatiyaLayoutEngine.getJatiyaChar('v', isShifted = false))
+    assertEquals("ল", JatiyaLayoutEngine.getJatiyaChar('v', isShifted = true))
+    assertEquals("ন", JatiyaLayoutEngine.getJatiyaChar('b', isShifted = false))
+    assertEquals("ণ", JatiyaLayoutEngine.getJatiyaChar('b', isShifted = true))
+    assertEquals("স", JatiyaLayoutEngine.getJatiyaChar('n', isShifted = false))
+    assertEquals("ষ", JatiyaLayoutEngine.getJatiyaChar('n', isShifted = true))
+    assertEquals("ম", JatiyaLayoutEngine.getJatiyaChar('m', isShifted = false))
+    assertEquals("শ", JatiyaLayoutEngine.getJatiyaChar('m', isShifted = true))
+  }
+
+  @Test
+  fun testBengaliCompositionHelper_StripDottedCircle() {
+    val karWithCircle = "◌ি"
+    assertEquals("ি", BengaliCompositionHelper.stripDottedCircle(karWithCircle))
+    assertEquals("া", BengaliCompositionHelper.stripDottedCircle("\u25CC\u09BE"))
+    assertEquals("ৌ", BengaliCompositionHelper.stripDottedCircle("ৌ"))
+  }
+
+  @Test
+  fun testBengaliComposition_ExcludeLegacySyntheticViramaInJatiya() {
+    // When isBijoy = false (Jatiya / Standard mode), '্' + 'া' MUST NOT convert to 'আ'.
+    // Independent vowels come strictly from the shifted map or long-press.
+    val resultJatiya = BengaliCompositionEngine.processInput(
+      incoming = "া",
+      prevChar = BengaliCompositionHelper.HASANTA,
+      isBijoy = false
+    )
+    assertTrue(resultJatiya is CompositionResult.Commit)
+    assertEquals("া", (resultJatiya as CompositionResult.Commit).text)
+
+    // When isBijoy = true (Bijoy Classic mode only), G-link remains supported
+    val resultBijoy = BengaliCompositionEngine.processInput(
+      incoming = "া",
+      prevChar = BengaliCompositionHelper.HASANTA,
+      isBijoy = true
+    )
+    assertTrue(resultBijoy is CompositionResult.Replace)
+    assertEquals("আ", (resultBijoy as CompositionResult.Replace).replacement)
+  }
+
+  @Test
+  fun testKeyboardEngine_JatiyaKeyMappingAndEngine() {
+    val engine = com.example.keyboard.engine.JatiyaLayoutEngine()
+    val row1 = com.example.keyboard.engine.JatiyaKeyMapping.ROW_1
+    val row2 = com.example.keyboard.engine.JatiyaKeyMapping.ROW_2
+    val row3 = com.example.keyboard.engine.JatiyaKeyMapping.ROW_3
+
+    assertEquals(10, row1.size)
+    assertEquals(9, row2.size)
+    assertEquals(7, row3.size)
+
+    // Test first key in Row 1: ঙ
+    val keyNg = row1[0]
+    assertEquals("ঙ", engine.resolveOutput(keyNg, isShifted = false, isLongPress = false))
+    assertEquals("ং", engine.resolveOutput(keyNg, isShifted = false, isLongPress = true))
+    assertEquals("ং", engine.resolveOutput(keyNg, isShifted = true, isLongPress = false))
+    assertEquals("ঁ", engine.resolveOutput(keyNg, isShifted = true, isLongPress = true))
+
+    // Labels resolving
+    val (primaryUnshifted, hintUnshifted) = engine.resolveLabels(keyNg, isShifted = false)
+    assertEquals("ঙ", primaryUnshifted)
+    assertEquals("ং", hintUnshifted)
+
+    val (primaryShifted, hintShifted) = engine.resolveLabels(keyNg, isShifted = true)
+    assertEquals("ং", primaryShifted)
+    assertEquals("ঁ", hintShifted)
+  }
+
+  @Test
+  fun testKeyboardEngine_DottedCircleSanitization() {
+    val engine = com.example.keyboard.engine.JatiyaLayoutEngine()
+    val mappingWithCircle = com.example.keyboard.engine.KeyMapping(
+      unshiftedPrimary = "◌ি",
+      unshiftedLongPress = "◌ী",
+      shiftedPrimary = "ঈ",
+      shiftedLongPress = "ঈ"
+    )
+    val (primary, hint) = engine.resolveLabels(mappingWithCircle, isShifted = false)
+    assertEquals("ি", primary)
+    assertEquals("ী", hint)
+  }
+
+  @Test
+  fun testClipboardAdapter_ListManagementAndRemove() {
+    var clickedItem: com.example.clipboard.ClipboardItem? = null
+    var deletedItem: com.example.clipboard.ClipboardItem? = null
+    var deletedPosition: Int = -1
+
+    val adapter = com.example.clipboard.ClipboardAdapter(
+      onItemClick = { clickedItem = it },
+      onItemDelete = { item, pos ->
+        deletedItem = item
+        deletedPosition = pos
+      }
+    )
+
+    val item1 = com.example.clipboard.ClipboardItem(id = 1L, text = "First copied item")
+    val item2 = com.example.clipboard.ClipboardItem(id = 2L, text = "Second copied item")
+    val item3 = com.example.clipboard.ClipboardItem(id = 3L, text = "Third copied item")
+
+    adapter.submitList(listOf(item1, item2, item3))
+    assertEquals(3, adapter.itemCount)
+    assertEquals(listOf(item1, item2, item3), adapter.getItems())
+
+    // Test remove item at index 1
+    val removed = adapter.removeItem(1)
+    assertEquals(item2, removed)
+    assertEquals(2, adapter.itemCount)
+    assertEquals(listOf(item1, item3), adapter.getItems())
+
+    // Test remove item out of bounds
+    val outOfBounds = adapter.removeItem(5)
+    assertNull(outOfBounds)
+    assertEquals(2, adapter.itemCount)
   }
 }
 

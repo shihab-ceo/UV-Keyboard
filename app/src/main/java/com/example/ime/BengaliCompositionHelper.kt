@@ -51,6 +51,11 @@ object BengaliCompositionHelper {
     fun isConsonant(s: String): Boolean = s in CONSONANTS
 
     /**
+     * Strips Unicode dotted circle (U+25CC / ◌) that some Android fonts attach to isolated vowel signs.
+     */
+    fun stripDottedCircle(glyph: String): String = glyph.replace("\u25CC", "")
+
+    /**
      * Maps a vowel sign to its corresponding independent vowel.
      */
     fun signToIndependentVowel(sign: String): String? = when (sign) {

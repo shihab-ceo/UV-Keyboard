@@ -2,6 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
@@ -28,10 +30,35 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".ImageCropActivity"
+            android:exported="false"
+            android:label="Crop Keyboard Background"
+            android:theme="@style/Theme.MyApplication" />
+
+        <activity
+            android:name=".ThemeSelectionActivity"
+            android:exported="false"
+            android:label="Keyboard Themes"
+            android:theme="@style/Theme.MyApplication" />
+
         <service
             android:name=".UVIME"
             android:exported="true"
             android:label="@string/ime_name"
+            android:permission="android.permission.BIND_INPUT_METHOD">
+            <intent-filter>
+                <action android:name="android.view.InputMethod" />
+            </intent-filter>
+            <meta-data
+                android:name="android.view.im"
+                android:resource="@xml/method" />
+        </service>
+
+        <service
+            android:name="com.example.keyboard.ui.MyInputMethodService"
+            android:exported="true"
+            android:label="UV Keyboard (Jatiya)"
             android:permission="android.permission.BIND_INPUT_METHOD">
             <intent-filter>
                 <action android:name="android.view.InputMethod" />

@@ -2,4 +2,11 @@
 <resources>
 
     <style name="Theme.MyApplication" parent="android:Theme.DeviceDefault.NoActionBar" />
+
+    <style name="Theme.UVKeyboard" parent="android:Theme.DeviceDefault.InputMethod" />
+
+    <style name="Animation.ClipboardPopup" parent="@android:style/Animation">
+        <item name="android:windowEnterAnimation">@anim/clipboard_popup_enter</item>
+        <item name="android:windowExitAnimation">@anim/clipboard_popup_exit</item>
+    </style>
 </resources>

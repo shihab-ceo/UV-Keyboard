@@ -2,6 +2,7 @@ package com.example
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.graphics.Bitmap
 import android.graphics.Color
 import android.net.Uri
 
@@ -18,7 +19,10 @@ data class KeyboardTheme(
     val isGradient: Boolean = false,
     val gradientStartColor: Int = 0,
     val gradientEndColor: Int = 0,
-    val isDark: Boolean = true
+    val isDark: Boolean = true,
+    val keyCornerRadius: Float = 14f,
+    val keyBackgroundOpacity: Float = 1.0f,
+    val keyPressRippleColor: Int = keyPressedColor
 )
 
 class ThemeManager(private val context: Context) {
@@ -34,6 +38,7 @@ class ThemeManager(private val context: Context) {
         const val KEY_USE_CUSTOM_COLOR = "use_custom_color"
         const val KEY_BG_IMAGE_URI = "bg_image_uri"
         const val KEY_BG_IMAGE_OPACITY = "bg_image_opacity"
+        const val KEY_ACTIVE_CUSTOM_THEME_ID = "active_custom_theme_id"
 
         const val KEY_KEYBOARD_HEIGHT_SCALE = "keyboard_height_scale"
         const val KEY_FONT_SIZE_SCALE = "font_size_scale"
@@ -54,17 +59,51 @@ class ThemeManager(private val context: Context) {
         const val LAYOUT_ENGLISH = "ENGLISH"
 
         val PRESET_THEMES = listOf(
+            // --- 1. CLASSIC THEMES ---
             KeyboardTheme(
-                id = "classic_white",
-                name = "Classic White",
-                backgroundColor = Color.parseColor("#F1F5F9"),
+                id = "material_light",
+                name = "Material Light",
+                backgroundColor = Color.parseColor("#F8F9FA"),
                 keyColor = Color.parseColor("#FFFFFF"),
-                keyPressedColor = Color.parseColor("#E2E8F0"),
-                actionKeyColor = Color.parseColor("#E2E8F0"),
-                textColor = Color.parseColor("#0F172A"),
-                accentColor = Color.parseColor("#0284C7"),
-                sublabelColor = Color.parseColor("#64748B"),
-                isDark = false
+                keyPressedColor = Color.parseColor("#E8EAED"),
+                actionKeyColor = Color.parseColor("#1A73E8"),
+                textColor = Color.parseColor("#202124"),
+                accentColor = Color.parseColor("#1A73E8"),
+                sublabelColor = Color.parseColor("#5F6368"),
+                isDark = false,
+                keyCornerRadius = 12f,
+                keyBackgroundOpacity = 1.0f,
+                keyPressRippleColor = Color.parseColor("#E8EAED")
+            ),
+            KeyboardTheme(
+                id = "amoled_black",
+                name = "Dark AMOLED",
+                backgroundColor = Color.parseColor("#000000"),
+                keyColor = Color.parseColor("#121212"),
+                keyPressedColor = Color.parseColor("#242424"),
+                actionKeyColor = Color.parseColor("#7C3AED"),
+                textColor = Color.parseColor("#FFFFFF"),
+                accentColor = Color.parseColor("#A855F7"),
+                sublabelColor = Color.parseColor("#9CA3AF"),
+                isDark = true,
+                keyCornerRadius = 14f,
+                keyBackgroundOpacity = 1.0f,
+                keyPressRippleColor = Color.parseColor("#27272A")
+            ),
+            KeyboardTheme(
+                id = "midnight_blue",
+                name = "Midnight Blue",
+                backgroundColor = Color.parseColor("#0A1128"),
+                keyColor = Color.parseColor("#1C2541"),
+                keyPressedColor = Color.parseColor("#2E3C66"),
+                actionKeyColor = Color.parseColor("#0077B6"),
+                textColor = Color.parseColor("#F0F4F8"),
+                accentColor = Color.parseColor("#48CAE4"),
+                sublabelColor = Color.parseColor("#829AB1"),
+                isDark = true,
+                keyCornerRadius = 14f,
+                keyBackgroundOpacity = 0.95f,
+                keyPressRippleColor = Color.parseColor("#2E3C66")
             ),
             KeyboardTheme(
                 id = "dark_night",
@@ -76,7 +115,146 @@ class ThemeManager(private val context: Context) {
                 textColor = Color.parseColor("#F8FAFC"),
                 accentColor = Color.parseColor("#38BDF8"),
                 sublabelColor = Color.parseColor("#94A3B8"),
-                isDark = true
+                isDark = true,
+                keyCornerRadius = 14f,
+                keyBackgroundOpacity = 1.0f,
+                keyPressRippleColor = Color.parseColor("#334155")
+            ),
+
+            // --- 2. GRADIENT THEMES ---
+            KeyboardTheme(
+                id = "sunset_gradient",
+                name = "Sunset Pink/Orange",
+                backgroundColor = Color.parseColor("#2A0845"),
+                keyColor = Color.parseColor("#3D105A"),
+                keyPressedColor = Color.parseColor("#581880"),
+                actionKeyColor = Color.parseColor("#F97316"),
+                textColor = Color.parseColor("#FFF7ED"),
+                accentColor = Color.parseColor("#FB923C"),
+                sublabelColor = Color.parseColor("#FDBA74"),
+                isGradient = true,
+                gradientStartColor = Color.parseColor("#EC4899"),
+                gradientEndColor = Color.parseColor("#EA580C"),
+                isDark = true,
+                keyCornerRadius = 16f,
+                keyBackgroundOpacity = 0.85f,
+                keyPressRippleColor = Color.parseColor("#581880")
+            ),
+            KeyboardTheme(
+                id = "deep_space_purple",
+                name = "Deep Space Purple",
+                backgroundColor = Color.parseColor("#090514"),
+                keyColor = Color.parseColor("#1E1035"),
+                keyPressedColor = Color.parseColor("#321B59"),
+                actionKeyColor = Color.parseColor("#9333EA"),
+                textColor = Color.parseColor("#FAF5FF"),
+                accentColor = Color.parseColor("#C084FC"),
+                sublabelColor = Color.parseColor("#D8B4FE"),
+                isGradient = true,
+                gradientStartColor = Color.parseColor("#581C87"),
+                gradientEndColor = Color.parseColor("#0F0A1C"),
+                isDark = true,
+                keyCornerRadius = 14f,
+                keyBackgroundOpacity = 0.88f,
+                keyPressRippleColor = Color.parseColor("#321B59")
+            ),
+            KeyboardTheme(
+                id = "ocean_gradient",
+                name = "Ocean Cyan/Blue",
+                backgroundColor = Color.parseColor("#082F49"),
+                keyColor = Color.parseColor("#0E4B75"),
+                keyPressedColor = Color.parseColor("#156094"),
+                actionKeyColor = Color.parseColor("#0284C7"),
+                textColor = Color.parseColor("#F0F9FF"),
+                accentColor = Color.parseColor("#38BDF8"),
+                sublabelColor = Color.parseColor("#7DD3FC"),
+                isGradient = true,
+                gradientStartColor = Color.parseColor("#0284C7"),
+                gradientEndColor = Color.parseColor("#041F38"),
+                isDark = true,
+                keyCornerRadius = 14f,
+                keyBackgroundOpacity = 0.85f,
+                keyPressRippleColor = Color.parseColor("#156094")
+            ),
+            KeyboardTheme(
+                id = "forest_emerald",
+                name = "Forest Emerald",
+                backgroundColor = Color.parseColor("#022C22"),
+                keyColor = Color.parseColor("#064E3B"),
+                keyPressedColor = Color.parseColor("#065F46"),
+                actionKeyColor = Color.parseColor("#059669"),
+                textColor = Color.parseColor("#ECFDF5"),
+                accentColor = Color.parseColor("#34D399"),
+                sublabelColor = Color.parseColor("#A7F3D0"),
+                isGradient = true,
+                gradientStartColor = Color.parseColor("#047857"),
+                gradientEndColor = Color.parseColor("#02241C"),
+                isDark = true,
+                keyCornerRadius = 14f,
+                keyBackgroundOpacity = 0.88f,
+                keyPressRippleColor = Color.parseColor("#065F46")
+            ),
+
+            // --- 3. MINIMAL & NEON THEMES ---
+            KeyboardTheme(
+                id = "high_contrast_dark",
+                name = "High Contrast Dark",
+                backgroundColor = Color.parseColor("#000000"),
+                keyColor = Color.parseColor("#262626"),
+                keyPressedColor = Color.parseColor("#404040"),
+                actionKeyColor = Color.parseColor("#CA8A04"),
+                textColor = Color.parseColor("#FFFFFF"),
+                accentColor = Color.parseColor("#FACC15"),
+                sublabelColor = Color.parseColor("#FDE047"),
+                isDark = true,
+                keyCornerRadius = 8f,
+                keyBackgroundOpacity = 1.0f,
+                keyPressRippleColor = Color.parseColor("#404040")
+            ),
+            KeyboardTheme(
+                id = "neon_purple",
+                name = "Neon Purple",
+                backgroundColor = Color.parseColor("#0B0813"),
+                keyColor = Color.parseColor("#19122B"),
+                keyPressedColor = Color.parseColor("#291C47"),
+                actionKeyColor = Color.parseColor("#C026D3"),
+                textColor = Color.parseColor("#FFFFFF"),
+                accentColor = Color.parseColor("#E879F9"),
+                sublabelColor = Color.parseColor("#22D3EE"),
+                isDark = true,
+                keyCornerRadius = 18f,
+                keyBackgroundOpacity = 0.90f,
+                keyPressRippleColor = Color.parseColor("#291C47")
+            ),
+            KeyboardTheme(
+                id = "pastel_mint",
+                name = "Pastel Mint",
+                backgroundColor = Color.parseColor("#E6F4EA"),
+                keyColor = Color.parseColor("#FFFFFF"),
+                keyPressedColor = Color.parseColor("#CEEAD6"),
+                actionKeyColor = Color.parseColor("#0D9488"),
+                textColor = Color.parseColor("#134E4A"),
+                accentColor = Color.parseColor("#0D9488"),
+                sublabelColor = Color.parseColor("#047857"),
+                isDark = false,
+                keyCornerRadius = 16f,
+                keyBackgroundOpacity = 1.0f,
+                keyPressRippleColor = Color.parseColor("#CEEAD6")
+            ),
+
+            // --- 4. COMPATIBILITY ALIASES & ADDITIONAL FAVORITES ---
+            KeyboardTheme(
+                id = "classic_white",
+                name = "Classic White",
+                backgroundColor = Color.parseColor("#F1F5F9"),
+                keyColor = Color.parseColor("#FFFFFF"),
+                keyPressedColor = Color.parseColor("#E2E8F0"),
+                actionKeyColor = Color.parseColor("#0284C7"),
+                textColor = Color.parseColor("#0F172A"),
+                accentColor = Color.parseColor("#0284C7"),
+                sublabelColor = Color.parseColor("#64748B"),
+                isDark = false,
+                keyCornerRadius = 12f
             ),
             KeyboardTheme(
                 id = "greenery",
@@ -88,7 +266,8 @@ class ThemeManager(private val context: Context) {
                 textColor = Color.parseColor("#ECFDF5"),
                 accentColor = Color.parseColor("#34D399"),
                 sublabelColor = Color.parseColor("#A7F3D0"),
-                isDark = true
+                isDark = true,
+                keyCornerRadius = 14f
             ),
             KeyboardTheme(
                 id = "aqua_sky",
@@ -100,31 +279,8 @@ class ThemeManager(private val context: Context) {
                 textColor = Color.parseColor("#E0F2FE"),
                 accentColor = Color.parseColor("#38BDF8"),
                 sublabelColor = Color.parseColor("#7DD3FC"),
-                isDark = true
-            ),
-            KeyboardTheme(
-                id = "light_ocean",
-                name = "Light Ocean",
-                backgroundColor = Color.parseColor("#F0F9FF"),
-                keyColor = Color.parseColor("#FFFFFF"),
-                keyPressedColor = Color.parseColor("#E0F2FE"),
-                actionKeyColor = Color.parseColor("#0284C7"),
-                textColor = Color.parseColor("#0F172A"),
-                accentColor = Color.parseColor("#0284C7"),
-                sublabelColor = Color.parseColor("#64748B"),
-                isDark = false
-            ),
-            KeyboardTheme(
-                id = "amoled_black",
-                name = "AMOLED Black",
-                backgroundColor = Color.parseColor("#000000"),
-                keyColor = Color.parseColor("#18181B"),
-                keyPressedColor = Color.parseColor("#27272A"),
-                actionKeyColor = Color.parseColor("#7C3AED"),
-                textColor = Color.parseColor("#FAFAFA"),
-                accentColor = Color.parseColor("#A855F7"),
-                sublabelColor = Color.parseColor("#A1A1AA"),
-                isDark = true
+                isDark = true,
+                keyCornerRadius = 14f
             ),
             KeyboardTheme(
                 id = "slate",
@@ -136,22 +292,8 @@ class ThemeManager(private val context: Context) {
                 textColor = Color.parseColor("#F1F5F9"),
                 accentColor = Color.parseColor("#38BDF8"),
                 sublabelColor = Color.parseColor("#CBD5E1"),
-                isDark = true
-            ),
-            KeyboardTheme(
-                id = "gradient",
-                name = "Gradient",
-                backgroundColor = Color.parseColor("#2E1065"),
-                keyColor = Color.parseColor("#4C1D95"),
-                keyPressedColor = Color.parseColor("#5B21B6"),
-                actionKeyColor = Color.parseColor("#EC4899"),
-                textColor = Color.parseColor("#FDF2F8"),
-                accentColor = Color.parseColor("#F472B6"),
-                sublabelColor = Color.parseColor("#FBCFE8"),
-                isGradient = true,
-                gradientStartColor = Color.parseColor("#4C1D95"),
-                gradientEndColor = Color.parseColor("#0F172A"),
-                isDark = true
+                isDark = true,
+                keyCornerRadius = 14f
             )
         )
     }
@@ -175,6 +317,78 @@ class ThemeManager(private val context: Context) {
     var bgImageOpacity: Float
         get() = prefs.getFloat(KEY_BG_IMAGE_OPACITY, 0.45f)
         set(value) = prefs.edit().putFloat(KEY_BG_IMAGE_OPACITY, value).apply()
+
+    var activeCustomThemeId: String?
+        get() = prefs.getString(KEY_ACTIVE_CUSTOM_THEME_ID, null)
+        set(value) = prefs.edit().putString(KEY_ACTIVE_CUSTOM_THEME_ID, value).apply()
+
+    val customThemeRepository: CustomThemeRepository = CustomThemeRepository(context)
+
+    fun getSavedCustomThemes(): List<CustomThemeModel> {
+        return customThemeRepository.getAllCustomThemes()
+    }
+
+    fun saveCustomTheme(customTheme: CustomThemeModel) {
+        customThemeRepository.saveCustomTheme(customTheme)
+    }
+
+    fun deleteCustomTheme(themeId: String) {
+        customThemeRepository.deleteCustomTheme(themeId)
+        if (activeCustomThemeId == themeId) {
+            applyPresetTheme("dark_night")
+        }
+    }
+
+    fun applyCustomTheme(customTheme: CustomThemeModel) {
+        activeCustomThemeId = customTheme.id
+        useCustomColor = false
+        selectedThemeId = "custom_${customTheme.id}"
+        if (customTheme.backgroundType == BackgroundType.IMAGE && !customTheme.galleryImageUri.isNullOrEmpty()) {
+            bgImageUriString = customTheme.galleryImageUri
+            bgImageOpacity = customTheme.imageOverlayOpacity
+        } else {
+            bgImageUriString = null
+        }
+    }
+
+    fun applyPresetTheme(presetThemeId: String) {
+        activeCustomThemeId = null
+        useCustomColor = false
+        selectedThemeId = presetThemeId
+        bgImageUriString = null
+    }
+
+    /**
+     * Saves a user-cropped background image to private internal storage, updating the URI and opacity.
+     * Storing internally prevents permission revocation across app restarts or OS updates.
+     */
+    fun saveCustomCroppedBackground(context: Context, bitmap: Bitmap, opacity: Float): Uri? {
+        return try {
+            val file = java.io.File(context.filesDir, "keyboard_custom_bg.jpg")
+            java.io.FileOutputStream(file).use { out ->
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 90, out)
+            }
+            val uri = Uri.fromFile(file)
+            bgImageUriString = uri.toString()
+            bgImageOpacity = opacity.coerceIn(0f, 0.95f)
+            uri
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    /**
+     * Clears any active custom background image and restores default theme rendering.
+     */
+    fun clearCustomBackground(context: Context) {
+        bgImageUriString = null
+        try {
+            val file = java.io.File(context.filesDir, "keyboard_custom_bg.jpg")
+            if (file.exists()) {
+                file.delete()
+            }
+        } catch (_: Exception) {}
+    }
 
     var keyboardHeightScale: Float
         get() = prefs.getFloat(KEY_KEYBOARD_HEIGHT_SCALE, 1.30f)
@@ -254,6 +468,14 @@ class ThemeManager(private val context: Context) {
     }
 
     fun getCurrentTheme(): KeyboardTheme {
+        val customId = activeCustomThemeId
+        if (!customId.isNullOrEmpty()) {
+            val customTheme = CustomThemeRepository(context).getCustomTheme(customId)
+            if (customTheme != null) {
+                return customTheme.toKeyboardTheme()
+            }
+        }
+
         val baseTheme = PRESET_THEMES.find { it.id == selectedThemeId } ?: PRESET_THEMES[0]
         if (useCustomColor) {
             val bg = customBgColor
@@ -283,7 +505,10 @@ class ThemeManager(private val context: Context) {
                 sublabelColor = sublabelColor,
                 accentColor = accentColor,
                 isDark = isDark,
-                isGradient = false
+                isGradient = false,
+                keyCornerRadius = 14f,
+                keyBackgroundOpacity = 1.0f,
+                keyPressRippleColor = keyPressedColor
             )
         }
         return baseTheme
