@@ -1,9 +1,56 @@
 <?xml version="1.0" encoding="utf-8"?>
-<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item
-        android:width="66dp"
-        android:height="66dp"
-        android:drawable="@drawable/ic_uv_keyboard_fg"
-        android:gravity="center" />
-</layer-list>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
 
+    <!-- Fine keyboard keys sit behind the UV monogram. -->
+    <path
+        android:fillColor="@android:color/transparent"
+        android:pathData="M28,32 H36 Q38,32 38,34 V40 Q38,42 36,42 H28 Q26,42 26,40 V34 Q26,32 28,32 Z M44,32 H52 Q54,32 54,34 V40 Q54,42 52,42 H44 Q42,42 42,40 V34 Q42,32 44,32 Z M60,32 H68 Q70,32 70,34 V40 Q70,42 68,42 H60 Q58,42 58,40 V34 Q58,32 60,32 Z M76,32 H84 Q86,32 86,34 V40 Q86,42 84,42 H76 Q74,42 74,40 V34 Q74,32 76,32 Z M26,48 H34 Q36,48 36,50 V56 Q36,58 34,58 H26 Q24,58 24,56 V50 Q24,48 26,48 Z M74,48 H82 Q84,48 84,50 V56 Q84,58 82,58 H74 Q72,58 72,56 V50 Q72,48 74,48 Z M28,64 H36 Q38,64 38,66 V72 Q38,74 36,74 H28 Q26,74 26,72 V66 Q26,64 28,64 Z M76,64 H84 Q86,64 86,66 V72 Q86,74 84,74 H76 Q74,74 74,72 V66 Q74,64 76,64 Z M44,68 H66 Q68,68 68,70 V74 Q68,76 66,76 H44 Q42,76 42,74 V70 Q42,68 44,68 Z"
+        android:strokeColor="#887E57D1"
+        android:strokeLineJoin="round"
+        android:strokeWidth="1.5" />
+
+    <!-- Soft neon halos for the brush lettering. -->
+    <path
+        android:fillColor="@android:color/transparent"
+        android:pathData="M36,35 L36,50 C36,59 41,64 49,64 C57,64 62,59 62,50 L62,39"
+        android:strokeColor="#665D32A8"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:strokeWidth="13" />
+    <path
+        android:fillColor="@android:color/transparent"
+        android:pathData="M55,39 C59,49 63,60 67,72 L82,35"
+        android:strokeColor="#66412EA7"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:strokeWidth="13" />
+
+    <!-- Hand-drawn UV letterforms with luminous pink and cyan strokes. -->
+    <path
+        android:fillColor="@android:color/transparent"
+        android:pathData="M36,35 L36,50 C36,59 41,64 49,64 C57,64 62,59 62,50 L62,39"
+        android:strokeColor="#F0ABFC"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:strokeWidth="6.5" />
+    <path
+        android:fillColor="@android:color/transparent"
+        android:pathData="M55,39 C59,49 63,60 67,72 L82,35"
+        android:strokeColor="#67E8F9"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:strokeWidth="7" />
+
+    <!-- Long calligraphic flourish tying the two letters together. -->
+    <path
+        android:fillColor="@android:color/transparent"
+        android:pathData="M27,57 C39,70 53,72 66,55 C72,47 77,39 85,34"
+        android:strokeColor="#B9A6FF"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:strokeWidth="2.5" />
+</vector>

@@ -570,6 +570,7 @@ class UVIME : InputMethodService() {
         trans.isTranslateModeActive = true
         flTranslatorContainer?.visibility = View.VISIBLE
         lastCommittedTranslationLength = 0
+        buildKeyboardRows()
     }
 
     private fun hideTranslator() {
@@ -580,6 +581,7 @@ class UVIME : InputMethodService() {
         flTranslatorContainer?.visibility = View.GONE
         lastCommittedTranslationLength = 0
         translatorView?.clearInput()
+        buildKeyboardRows()
     }
 
     private fun toggleTrackpad() {
@@ -939,7 +941,7 @@ class UVIME : InputMethodService() {
         val actionIcon = getDynamicActionIcon()
         val rowDataList: List<List<KeyboardKey>> = when {
             isSymbols -> {
-                if (isBengaliNumbers) BengaliLayouts.getBengaliNumberRows()
+                if (currentMode != ThemeManager.LAYOUT_ENGLISH) BengaliLayouts.getBengaliNumberRows()
                 else BengaliLayouts.getSymbolRows()
             }
             else -> KeyboardLayoutMapper.getLayoutRows(currentMode, isShifted, isCapsLock, actionIcon)
@@ -950,11 +952,15 @@ class UVIME : InputMethodService() {
         // When not in symbols mode, dynamically render our custom Canvas-based keyboard views
         // for ALL layouts (Jatiya, Bijoy, Avro, Prabhat, English) ensuring 100% theme property inheritance!
         if (!isSymbols) {
-            val totalRows = 4
-            val keyboardHeightDp = (baseRowHeight * totalRows)
+            val showNumberRow = themeManager.numberRowEnabled
+            val numberRowHeightDp = (34 * heightScale).toInt()
+            // Keep the overall keyboard height fixed; the number row shares this space
+            // instead of being counted again on top of the four character rows.
+            val keyboardHeightDp = baseRowHeight * 4
+            val canvasHeightDp = keyboardHeightDp - if (showNumberRow) numberRowHeightDp else 0
             val keyboardHeightPx = TypedValue.applyDimension(
                 TypedValue.COMPLEX_UNIT_DIP,
-                keyboardHeightDp.toFloat(),
+                canvasHeightDp.toFloat(),
                 resources.displayMetrics
             ).toInt()
 
@@ -1015,6 +1021,27 @@ class UVIME : InputMethodService() {
                     playKeyFeedback()
                     this@UVIME.isShifted = shifted
                 }
+                this.onCapsLockChanged = { locked ->
+                    val wasLocked = this@UVIME.isCapsLock
+                    this@UVIME.isCapsLock = locked
+                    if (wasLocked != locked) buildKeyboardRows()
+                }
+                this.onSwipeTypingListener = { tokens ->
+                    val raw = tokens.joinToString("")
+                    val query = if (currentMode == ThemeManager.LAYOUT_AVRO) {
+                        BengaliEngine.phoneticTransliterate(raw)
+                    } else raw
+                    val candidates = if (currentMode == ThemeManager.LAYOUT_ENGLISH) {
+                        BengaliEngine.getEnglishPredictions(query, 5)
+                    } else BengaliEngine.getPredictions(query, 5)
+                    val resolved = candidates.firstOrNull { it.equals(query, ignoreCase = true) }
+                        ?: candidates.firstOrNull()
+                        ?: query
+                    currentInputConnection?.commitText("$resolved ", 1)
+                    currentWordBuffer.clear()
+                    updateCandidates()
+                    true
+                }
                 this.onSpacebarSwipeNextListener = {
                     playKeyFeedback()
                     cycleNextLayoutMode()
@@ -1047,7 +1074,8 @@ class UVIME : InputMethodService() {
 
             // Adjust root wrapper height
             val candidateBarHeightDp = 44
-            val totalHeightDp = candidateBarHeightDp + keyboardHeightDp + 8
+            val translatorHeightDp = if (isTranslatorOpen) 78 else 0
+            val totalHeightDp = candidateBarHeightDp + translatorHeightDp + keyboardHeightDp + 8
             val totalHeightPx = TypedValue.applyDimension(
                 TypedValue.COMPLEX_UNIT_DIP,
                 totalHeightDp.toFloat(),
@@ -1063,13 +1091,29 @@ class UVIME : InputMethodService() {
                 wrapper.layoutParams = lp
             }
 
+            if (showNumberRow) {
+                val digits = if (currentMode == ThemeManager.LAYOUT_ENGLISH) "0123456789" else "০১২৩৪৫৬৭৮৯"
+                val numberRow = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER
+                    layoutParams = LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, numberRowHeightDp.toFloat(), resources.displayMetrics).toInt()
+                    )
+                }
+                digits.forEach { digit ->
+                    numberRow.addView(createKeyView(KeyboardKey(label = digit.toString(), output = digit.toString()), theme, fontScale))
+                }
+                rowsContainer.addView(numberRow)
+            }
             rowsContainer.addView(canvasKeyboardView)
             return
         }
 
         // Programmatically adjust the total height of the root keyboard layout view based on user preference
         val candidateBarHeightDp = 44
-        val totalHeightDp = candidateBarHeightDp + (baseRowHeight * rowDataList.size) + 8
+        val translatorHeightDp = if (isTranslatorOpen) 78 else 0
+        val totalHeightDp = candidateBarHeightDp + translatorHeightDp + (baseRowHeight * rowDataList.size) + 8
         val totalHeightPx = TypedValue.applyDimension(
             TypedValue.COMPLEX_UNIT_DIP,
             totalHeightDp.toFloat(),
@@ -1167,7 +1211,7 @@ class UVIME : InputMethodService() {
                     ThemeManager.LAYOUT_PRABHAT -> "◀  Prabhat  ▶"
                     else -> "◀  English  ▶"
                 }
-                KeyType.SHIFT -> if (currentMode == ThemeManager.LAYOUT_JATIYA || currentMode == ThemeManager.LAYOUT_BIJOY) "⬆" else if (isCapsLock) "⇪" else "⬆"
+                KeyType.SHIFT -> if (isCapsLock) "⇪" else "⬆"
                 KeyType.ENTER -> getDynamicActionIcon()
                 KeyType.NORMAL -> if (isShifted || isCapsLock) {
                     if (key.shiftOutput.isNotEmpty()) key.shiftOutput else key.label
@@ -1596,7 +1640,8 @@ class UVIME : InputMethodService() {
             }
             KeyType.SWITCH_SYMBOLS -> {
                 isSymbols = !isSymbols
-                isBengaliNumbers = false
+                // Open the number page in the active keyboard's numeral system.
+                isBengaliNumbers = isSymbols && currentMode != ThemeManager.LAYOUT_ENGLISH
                 buildKeyboardRows()
             }
             KeyType.SWITCH_EMOJI -> {
@@ -1689,3 +1734,8 @@ class UVIME : InputMethodService() {
         )
     }
 }
+
+
+
+
+

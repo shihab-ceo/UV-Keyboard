@@ -70,6 +70,8 @@ abstract class BaseKeyboardView @JvmOverloads constructor(
     var onEnterListener: (() -> Unit)? = null
     var onSpaceListener: (() -> Unit)? = null
     var onShiftToggleListener: ((isShifted: Boolean) -> Unit)? = null
+    var onCapsLockChanged: ((isLocked: Boolean) -> Unit)? = null
+    var onSwipeTypingListener: ((keys: List<String>) -> Boolean)? = null
     var onSpacebarSwipeNextListener: (() -> Unit)? = null
     var onSpacebarSwipePrevListener: (() -> Unit)? = null
     var onSymbolsToggleListener: (() -> Unit)? = null
@@ -239,6 +241,11 @@ abstract class BaseKeyboardView @JvmOverloads constructor(
     protected var isLongPressTriggered = false
     private var touchDownX = 0f
     private var touchDownY = 0f
+    private var lastShiftTapTime = 0L
+    private val swipePath = mutableListOf<String>()
+    private var lastTouchX = 0f
+    private var lastTouchY = 0f
+    private var swipeDistance = 0f
     private var isSpaceSwipeHandled = false
 
     private val longPressRunnable = Runnable {
@@ -612,10 +619,15 @@ abstract class BaseKeyboardView @JvmOverloads constructor(
             MotionEvent.ACTION_DOWN -> {
                 touchDownX = x
                 touchDownY = y
+                lastTouchX = x
+                lastTouchY = y
+                swipeDistance = 0f
+                swipePath.clear()
                 isSpaceSwipeHandled = false
                 val hitKey = findKeyAt(x.toInt(), y.toInt())
                 if (hitKey != null) {
                     activePressedKey = hitKey
+                    if (hitKey.type is KeyType.Character) appendSwipeKey(hitKey)
                     isLongPressTriggered = false
                     playKeyFeedback()
 
@@ -632,6 +644,9 @@ abstract class BaseKeyboardView @JvmOverloads constructor(
             MotionEvent.ACTION_MOVE -> {
                 val dx = x - touchDownX
                 val dy = y - touchDownY
+                val segmentDx = x - lastTouchX
+                val segmentDy = y - lastTouchY
+                swipeDistance += kotlin.math.sqrt(segmentDx * segmentDx + segmentDy * segmentDy)
 
                 // Spacebar horizontal swipe gesture to switch language/layout
                 if (activePressedKey?.type is KeyType.Space && !isSpaceSwipeHandled) {
@@ -660,6 +675,9 @@ abstract class BaseKeyboardView @JvmOverloads constructor(
                 }
 
                 val currentHit = findKeyAt(x.toInt(), y.toInt())
+                recordSwipeSegment(lastTouchX, lastTouchY, x, y)
+                lastTouchX = x
+                lastTouchY = y
                 if (currentHit != activePressedKey) {
                     uiHandler.removeCallbacks(longPressRunnable)
                     stopBackspaceRepeat()
@@ -680,6 +698,7 @@ abstract class BaseKeyboardView @JvmOverloads constructor(
             MotionEvent.ACTION_UP -> {
                 uiHandler.removeCallbacks(longPressRunnable)
                 stopBackspaceRepeat()
+                recordSwipeSegment(lastTouchX, lastTouchY, x, y)
                 val key = activePressedKey
                 activePressedKey = null
 
@@ -689,9 +708,18 @@ abstract class BaseKeyboardView @JvmOverloads constructor(
                     return true
                 }
 
+                val minWordSwipe = 48f * context.resources.displayMetrics.density
+                if (!isLongPressTriggered && swipeDistance >= minWordSwipe && swipePath.size >= 3 &&
+                    onSwipeTypingListener?.invoke(swipePath.toList()) == true
+                ) {
+                    invalidate()
+                    swipePath.clear()
+                    return true
+                }
                 if (key != null && !isLongPressTriggered && key.type !is KeyType.Backspace) {
                     handleKeyTap(key)
                 }
+                swipePath.clear()
                 isLongPressTriggered = false
                 invalidate()
                 return true
@@ -702,6 +730,7 @@ abstract class BaseKeyboardView @JvmOverloads constructor(
                 activePressedKey = null
                 isLongPressTriggered = false
                 isSpaceSwipeHandled = false
+                swipePath.clear()
                 invalidate()
                 return true
             }
@@ -719,8 +748,20 @@ abstract class BaseKeyboardView @JvmOverloads constructor(
                 handleCharacterTap(item, type.payload)
             }
             is KeyType.Shift -> {
-                isShifted = !isShifted
+                val now = android.os.SystemClock.uptimeMillis()
+                val doubleTapTimeout = ViewConfiguration.getDoubleTapTimeout().toLong()
+                if (isCapsLock) {
+                    isCapsLock = false
+                    isShifted = false
+                } else if (lastShiftTapTime > 0 && now - lastShiftTapTime <= doubleTapTimeout) {
+                    isCapsLock = true
+                    isShifted = true
+                } else {
+                    isShifted = !isShifted
+                }
+                lastShiftTapTime = now
                 onShiftToggleListener?.invoke(isShifted)
+                onCapsLockChanged?.invoke(isCapsLock)
                 invalidate()
             }
             is KeyType.Backspace -> {
@@ -747,6 +788,29 @@ abstract class BaseKeyboardView @JvmOverloads constructor(
         }
     }
 
+    private fun appendSwipeKey(item: BaseKeyItem) {
+        val token = when (val type = item.type) {
+            is KeyType.Character -> when (val payload = type.payload) {
+                is KeyboardKey -> if (isShifted && payload.shiftOutput.isNotEmpty()) payload.shiftOutput else payload.output
+                is com.example.keyboard.engine.KeyMapping -> if (isShifted) payload.shiftedPrimary else payload.unshiftedPrimary
+                else -> null
+            }
+            else -> null
+        }
+        if (!token.isNullOrBlank() && token != swipePath.lastOrNull()) swipePath.add(token)
+    }
+
+    private fun recordSwipeSegment(x1: Float, y1: Float, x2: Float, y2: Float) {
+        val distance = kotlin.math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1))
+        val step = (8f * context.resources.displayMetrics.density).coerceAtLeast(1f)
+        val samples = (distance / step).toInt().coerceAtLeast(1)
+        for (index in 1..samples) {
+            val fraction = index.toFloat() / samples
+            val hit = findKeyAt((x1 + (x2 - x1) * fraction).toInt(), (y1 + (y2 - y1) * fraction).toInt())
+            if (hit?.type is KeyType.Character) appendSwipeKey(hit)
+        }
+    }
+
     protected open fun handleKeyLongPress(item: BaseKeyItem) {
         when (val type = item.type) {
             is KeyType.Character -> {
@@ -756,6 +820,7 @@ abstract class BaseKeyboardView @JvmOverloads constructor(
                 isCapsLock = !isCapsLock
                 isShifted = isCapsLock
                 onShiftToggleListener?.invoke(isShifted)
+                onCapsLockChanged?.invoke(isCapsLock)
             }
             is KeyType.Comma -> {
                 onSettingsHintListener?.invoke()

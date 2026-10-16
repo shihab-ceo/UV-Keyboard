@@ -50,6 +50,7 @@ class ThemeManager(private val context: Context) {
         const val KEY_AUTOCORRECT_AGGRESSIVENESS = "autocorrect_aggressiveness"
         const val KEY_DEFAULT_LAYOUT = "default_layout"
         const val KEY_ENABLED_LAYOUTS = "enabled_layouts"
+        const val KEY_NUMBER_ROW = "number_row_enabled"
 
         // Layout constants
         const val LAYOUT_JATIYA = "JATIYA"
@@ -417,6 +418,10 @@ class ThemeManager(private val context: Context) {
     var personalLearningEnabled: Boolean
         get() = prefs.getBoolean(KEY_PERSONAL_LEARNING, true)
         set(value) = prefs.edit().putBoolean(KEY_PERSONAL_LEARNING, value).apply()
+
+    var numberRowEnabled: Boolean
+        get() = prefs.getBoolean(KEY_NUMBER_ROW, false)
+        set(value) = prefs.edit().putBoolean(KEY_NUMBER_ROW, value).apply()
 
     var autocorrectAggressiveness: String
         get() = prefs.getString(KEY_AUTOCORRECT_AGGRESSIVENESS, "Balanced") ?: "Balanced"

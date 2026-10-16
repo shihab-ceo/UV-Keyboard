@@ -19,6 +19,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -109,6 +110,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -182,27 +184,27 @@ fun UVKeyboardMainScreen(
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
-        containerColor = Color(0xFF0F172A),
+        containerColor = Color(0xFF080B18),
         topBar = {
             TopAppBar(
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
                             modifier = Modifier
-                                .size(34.dp)
+                                .size(44.dp)
                                 .clip(RoundedCornerShape(8.dp))
                                 .background(
                                     Brush.linearGradient(
-                                        listOf(Color(0xFF6366F1), Color(0xFF38BDF8))
+                                        listOf(Color(0xFF5A2F9F), Color(0xFF147E91))
                                     )
                                 ),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                text = "UV",
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 14.sp
+                            Image(
+                                painter = painterResource(id = R.drawable.uv_keyboard_brand),
+                                contentDescription = "UV Keyboard logo",
+                                modifier = Modifier.size(44.dp),
+                                contentScale = ContentScale.Fit
                             )
                         }
                         Spacer(modifier = Modifier.width(10.dp))
@@ -215,14 +217,14 @@ fun UVKeyboardMainScreen(
                             )
                             Text(
                                 text = "Bengali & English Custom IME",
-                                color = Color(0xFF94A3B8),
+                                color = Color(0xFFA4B0C8),
                                 fontSize = 11.sp
                             )
                         }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF1E293B)
+                    containerColor = Color(0xFF111729)
                 ),
                 actions = {
                     Box(
@@ -246,7 +248,7 @@ fun UVKeyboardMainScreen(
         },
         bottomBar = {
             NavigationBar(
-                containerColor = Color(0xFF1E293B),
+                containerColor = Color(0xFF111729),
                 contentColor = Color.White
             ) {
                 MainNavTab.entries.forEach { tab ->
@@ -270,11 +272,11 @@ fun UVKeyboardMainScreen(
                             )
                         },
                         colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = Color(0xFF38BDF8),
-                            selectedTextColor = Color(0xFF38BDF8),
-                            unselectedIconColor = Color(0xFF94A3B8),
-                            unselectedTextColor = Color(0xFF94A3B8),
-                            indicatorColor = Color(0xFF334155)
+                            selectedIconColor = Color(0xFF58E4F1),
+                            selectedTextColor = Color(0xFF58E4F1),
+                            unselectedIconColor = Color(0xFFA4B0C8),
+                            unselectedTextColor = Color(0xFFA4B0C8),
+                            indicatorColor = Color(0xFF222B43)
                         )
                     )
                 }
@@ -344,30 +346,35 @@ fun SetupTabContent(
         // Hero Header
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF111729)),
             shape = RoundedCornerShape(16.dp)
         ) {
-            Column(modifier = Modifier.padding(18.dp)) {
+            Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "🚀 কীবোর্ড সক্রিয়করণ (Setup Wizard)",
-                        color = Color.White,
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight.Bold
+                    Image(
+                        painter = painterResource(id = R.drawable.uv_keyboard_brand),
+                        contentDescription = "UV Keyboard logo",
+                        modifier = Modifier.size(68.dp).clip(RoundedCornerShape(18.dp)),
+                        contentScale = ContentScale.Crop
                     )
-                    Spacer(modifier = Modifier.weight(1f))
+                    Spacer(modifier = Modifier.width(14.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(text = "UV Keyboard", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                        Text(text = "বাংলা • English • Smart typing", color = Color(0xFF58E4F1), fontSize = 11.sp)
+                    }
                     IconButton(onClick = onRefresh) {
-                        Icon(
-                            Icons.Default.Refresh,
-                            contentDescription = "Refresh Status",
-                            tint = Color(0xFF38BDF8)
-                        )
+                        Icon(Icons.Default.Refresh, contentDescription = "Refresh Status", tint = Color(0xFF58E4F1))
                     }
                 }
-                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "🚀 কীবোর্ড সক্রিয়করণ (Setup Wizard)",
+                    color = Color.White,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold
+                )
                 Text(
                     text = "Follow these two quick steps to start typing with UV Keyboard anywhere on your device.",
-                    color = Color(0xFF94A3B8),
+                    color = Color(0xFFA4B0C8),
                     fontSize = 13.sp
                 )
             }
@@ -377,7 +384,7 @@ fun SetupTabContent(
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(
-                containerColor = if (isImeEnabled) Color(0xFF132E27) else Color(0xFF1E293B)
+                containerColor = if (isImeEnabled) Color(0xFF132E27) else Color(0xFF111729)
             ),
             shape = RoundedCornerShape(14.dp),
             border = if (isImeEnabled) {
@@ -394,7 +401,7 @@ fun SetupTabContent(
                     modifier = Modifier
                         .size(36.dp)
                         .clip(CircleShape)
-                        .background(if (isImeEnabled) Color(0xFF10B981) else Color(0xFF334155)),
+                        .background(if (isImeEnabled) Color(0xFF10B981) else Color(0xFF222B43)),
                     contentAlignment = Alignment.Center
                 ) {
                     if (isImeEnabled) {
@@ -413,7 +420,7 @@ fun SetupTabContent(
                     )
                     Text(
                         text = if (isImeEnabled) "সক্ষম করা হয়েছে (Enabled)" else "Settings থেকে কীবোর্ডটি চালু করুন",
-                        color = if (isImeEnabled) Color(0xFF34D399) else Color(0xFF94A3B8),
+                        color = if (isImeEnabled) Color(0xFF34D399) else Color(0xFFA4B0C8),
                         fontSize = 12.sp
                     )
                 }
@@ -423,7 +430,7 @@ fun SetupTabContent(
                         context.startActivity(intent)
                     },
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isImeEnabled) Color(0xFF047857) else Color(0xFF2563EB)
+                        containerColor = if (isImeEnabled) Color(0xFF047857) else Color(0xFF7255E8)
                     ),
                     shape = RoundedCornerShape(8.dp)
                 ) {
@@ -436,7 +443,7 @@ fun SetupTabContent(
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(
-                containerColor = if (isImeSelected) Color(0xFF132E27) else Color(0xFF1E293B)
+                containerColor = if (isImeSelected) Color(0xFF132E27) else Color(0xFF111729)
             ),
             shape = RoundedCornerShape(14.dp),
             border = if (isImeSelected) {
@@ -453,7 +460,7 @@ fun SetupTabContent(
                     modifier = Modifier
                         .size(36.dp)
                         .clip(CircleShape)
-                        .background(if (isImeSelected) Color(0xFF10B981) else Color(0xFF334155)),
+                        .background(if (isImeSelected) Color(0xFF10B981) else Color(0xFF222B43)),
                     contentAlignment = Alignment.Center
                 ) {
                     if (isImeSelected) {
@@ -472,7 +479,7 @@ fun SetupTabContent(
                     )
                     Text(
                         text = if (isImeSelected) "বর্তমানে সক্রিয় কীবোর্ড (Active)" else "কীবোর্ড স্যুইচ করুন",
-                        color = if (isImeSelected) Color(0xFF34D399) else Color(0xFF94A3B8),
+                        color = if (isImeSelected) Color(0xFF34D399) else Color(0xFFA4B0C8),
                         fontSize = 12.sp
                     )
                 }
@@ -482,7 +489,7 @@ fun SetupTabContent(
                         imm.showInputMethodPicker()
                     },
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isImeSelected) Color(0xFF047857) else Color(0xFF2563EB)
+                        containerColor = if (isImeSelected) Color(0xFF047857) else Color(0xFF7255E8)
                     ),
                     shape = RoundedCornerShape(8.dp)
                 ) {
@@ -494,7 +501,7 @@ fun SetupTabContent(
         // Voice Input Permission Card
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF111729)),
             shape = RoundedCornerShape(14.dp)
         ) {
             Row(
@@ -507,7 +514,7 @@ fun SetupTabContent(
                     modifier = Modifier
                         .size(36.dp)
                         .clip(CircleShape)
-                        .background(if (hasAudioPermission) Color(0xFF059669) else Color(0xFF475569)),
+                        .background(if (hasAudioPermission) Color(0xFF059669) else Color(0xFF3A465F)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(Icons.Default.Mic, contentDescription = "Mic", tint = Color.White)
@@ -522,7 +529,7 @@ fun SetupTabContent(
                     )
                     Text(
                         text = if (hasAudioPermission) "Permission Granted" else "Required for microphone dictation",
-                        color = if (hasAudioPermission) Color(0xFF34D399) else Color(0xFF94A3B8),
+                        color = if (hasAudioPermission) Color(0xFF34D399) else Color(0xFFA4B0C8),
                         fontSize = 12.sp
                     )
                 }
@@ -533,7 +540,7 @@ fun SetupTabContent(
                         },
                         shape = RoundedCornerShape(8.dp)
                     ) {
-                        Text("Grant", color = Color(0xFF38BDF8))
+                        Text("Grant", color = Color(0xFF58E4F1))
                     }
                 }
             }
@@ -542,7 +549,7 @@ fun SetupTabContent(
         // Live Interactive Typing Test Area
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF111729)),
             shape = RoundedCornerShape(16.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
@@ -556,7 +563,7 @@ fun SetupTabContent(
                     Spacer(modifier = Modifier.weight(1f))
                     if (testText.isNotEmpty()) {
                         IconButton(onClick = { testText = "" }) {
-                            Icon(Icons.Default.Clear, contentDescription = "Clear", tint = Color(0xFF94A3B8))
+                            Icon(Icons.Default.Clear, contentDescription = "Clear", tint = Color(0xFFA4B0C8))
                         }
                     }
                 }
@@ -565,7 +572,7 @@ fun SetupTabContent(
                     value = testText,
                     onValueChange = { testText = it },
                     placeholder = {
-                        Text("এখানে টাইপ করে জাতীয়/Avro/বিজয় ও স্পীচ পরীক্ষা করুন...", color = Color(0xFF64748B))
+                        Text("এখানে টাইপ করে জাতীয়/Avro/বিজয় ও স্পীচ পরীক্ষা করুন...", color = Color(0xFF78849B))
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -574,9 +581,9 @@ fun SetupTabContent(
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = Color.White,
                         unfocusedTextColor = Color.White,
-                        focusedBorderColor = Color(0xFF38BDF8),
-                        unfocusedBorderColor = Color(0xFF475569),
-                        cursorColor = Color(0xFF38BDF8)
+                        focusedBorderColor = Color(0xFF58E4F1),
+                        unfocusedBorderColor = Color(0xFF3A465F),
+                        cursorColor = Color(0xFF58E4F1)
                     ),
                     shape = RoundedCornerShape(12.dp)
                 )
@@ -587,7 +594,7 @@ fun SetupTabContent(
                         FilterChip(
                             selected = false,
                             onClick = { testText = (testText + " " + word).trim() },
-                            label = { Text(word, color = Color(0xFFCBD5E1), fontSize = 12.sp) }
+                            label = { Text(word, color = Color(0xFFE1E7F2), fontSize = 12.sp) }
                         )
                     }
                 }
@@ -685,7 +692,7 @@ fun ThemesTabContent(themeManager: ThemeManager) {
                 )
                 Text(
                     text = "বিল্ট-ইন প্রিসেট থিম বেছে নিন অথবা সম্পূর্ণ কাস্টম থিম তৈরি করুন।",
-                    color = Color(0xFF94A3B8),
+                    color = Color(0xFFA4B0C8),
                     fontSize = 13.sp
                 )
             }
@@ -695,7 +702,7 @@ fun ThemesTabContent(themeManager: ThemeManager) {
                         context.startActivity(android.content.Intent(context, ThemeSelectionActivity::class.java))
                     },
                     shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF38BDF8))
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF58E4F1))
                 ) {
                     Icon(Icons.Default.Palette, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))
@@ -706,7 +713,7 @@ fun ThemesTabContent(themeManager: ThemeManager) {
                         themeToEdit = null
                         showBuilderDialog = true
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7C3AED)),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8B5CF6)),
                     shape = RoundedCornerShape(10.dp)
                 ) {
                     Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
@@ -719,13 +726,13 @@ fun ThemesTabContent(themeManager: ThemeManager) {
         // Section 1: Built-in Preset Themes
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF111729)),
             shape = RoundedCornerShape(14.dp)
         ) {
             Column(modifier = Modifier.padding(14.dp)) {
                 Text(
                     text = "১. প্রিসেট থিমস (Built-in Preset Themes)",
-                    color = Color(0xFF38BDF8),
+                    color = Color(0xFF58E4F1),
                     fontWeight = FontWeight.Bold,
                     fontSize = 14.sp
                 )
@@ -748,10 +755,10 @@ fun ThemesTabContent(themeManager: ThemeManager) {
                             onClick = { selectedPresetCategory = catKey },
                             label = { Text(catLabel, fontSize = 12.sp) },
                             colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = Color(0xFF38BDF8),
-                                selectedLabelColor = Color(0xFF0F172A),
-                                containerColor = Color(0xFF0F172A),
-                                labelColor = Color(0xFF94A3B8)
+                                selectedContainerColor = Color(0xFF58E4F1),
+                                selectedLabelColor = Color(0xFF080B18),
+                                containerColor = Color(0xFF080B18),
+                                labelColor = Color(0xFFA4B0C8)
                             )
                         )
                     }
@@ -798,12 +805,12 @@ fun ThemesTabContent(themeManager: ThemeManager) {
         // Section 3: Custom Solid Color
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF111729)),
             shape = RoundedCornerShape(14.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.ColorLens, contentDescription = null, tint = Color(0xFF38BDF8))
+                    Icon(Icons.Default.ColorLens, contentDescription = null, tint = Color(0xFF58E4F1))
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = "৩. দ্রুত সলিড কালার (Quick Solid Color)",
@@ -814,9 +821,9 @@ fun ThemesTabContent(themeManager: ThemeManager) {
                 }
                 Spacer(modifier = Modifier.height(10.dp))
                 val paletteColors = listOf(
-                    0xFF0F172A.toInt(), 0xFF1E1B4B.toInt(), 0xFF064E3B.toInt(),
+                    0xFF080B18.toInt(), 0xFF1E1B4B.toInt(), 0xFF064E3B.toInt(),
                     0xFF831843.toInt(), 0xFF701A75.toInt(), 0xFF1C1917.toInt(),
-                    0xFF083344.toInt(), 0xFF312E81.toInt(), 0xFF1E293B.toInt()
+                    0xFF083344.toInt(), 0xFF312E81.toInt(), 0xFF111729.toInt()
                 )
                 LazyRow(
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -831,7 +838,7 @@ fun ThemesTabContent(themeManager: ThemeManager) {
                                 .background(Color(colorValue))
                                 .border(
                                     width = if (isPicked) 3.dp else 1.dp,
-                                    color = if (isPicked) Color.White else Color(0xFF475569),
+                                    color = if (isPicked) Color.White else Color(0xFF3A465F),
                                     shape = CircleShape
                                 )
                                 .clickable {
@@ -861,12 +868,12 @@ fun ThemesTabContent(themeManager: ThemeManager) {
         // Section 4: Custom Gallery Image Background
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF111729)),
             shape = RoundedCornerShape(14.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Image, contentDescription = null, tint = Color(0xFF38BDF8))
+                    Icon(Icons.Default.Image, contentDescription = null, tint = Color(0xFF58E4F1))
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = "৪. গ্যালারি ব্যাকগ্রাউন্ড ইমেজ (Gallery Image)",
@@ -878,7 +885,7 @@ fun ThemesTabContent(themeManager: ThemeManager) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = "Pick any image from your device. It will be center-cropped beneath the keys with adjustable opacity overlay.",
-                    color = Color(0xFF94A3B8),
+                    color = Color(0xFFA4B0C8),
                     fontSize = 12.sp
                 )
                 Spacer(modifier = Modifier.height(12.dp))
@@ -892,7 +899,7 @@ fun ThemesTabContent(themeManager: ThemeManager) {
                         onClick = {
                             galleryLauncher.launch(arrayOf("image/*"))
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB)),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7255E8)),
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Text("গ্যালারি থেকে ছবি বাছুন")
@@ -907,7 +914,7 @@ fun ThemesTabContent(themeManager: ThemeManager) {
                                 }
                                 cropLauncher.launch(cropIntent)
                             },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0088CC)),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF19B6C8)),
                             shape = RoundedCornerShape(8.dp)
                         ) {
                             Text("ক্রপ / অ্যাডজাস্ট")
@@ -930,7 +937,7 @@ fun ThemesTabContent(themeManager: ThemeManager) {
                     Spacer(modifier = Modifier.height(14.dp))
                     Text(
                         text = "Overlay Opacity / Darkening: ${(bgOpacity * 100).toInt()}%",
-                        color = Color(0xFFCBD5E1),
+                        color = Color(0xFFE1E7F2),
                         fontSize = 13.sp
                     )
                     Slider(
@@ -941,9 +948,9 @@ fun ThemesTabContent(themeManager: ThemeManager) {
                         },
                         valueRange = 0.1f..0.9f,
                         colors = SliderDefaults.colors(
-                            thumbColor = Color(0xFF38BDF8),
-                            activeTrackColor = Color(0xFF38BDF8),
-                            inactiveTrackColor = Color(0xFF334155)
+                            thumbColor = Color(0xFF58E4F1),
+                            activeTrackColor = Color(0xFF58E4F1),
+                            inactiveTrackColor = Color(0xFF222B43)
                         )
                     )
                     Spacer(modifier = Modifier.height(8.dp))
@@ -1019,9 +1026,9 @@ fun ThemeCard(
             containerColor = if (theme.isGradient) Color(theme.gradientStartColor) else Color(theme.backgroundColor)
         ),
         border = if (isSelected) {
-            androidx.compose.foundation.BorderStroke(2.dp, Color(0xFF38BDF8))
+            androidx.compose.foundation.BorderStroke(2.dp, Color(0xFF58E4F1))
         } else {
-            androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF334155))
+            androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF222B43))
         }
     ) {
         Box(
@@ -1061,7 +1068,7 @@ fun ThemeCard(
                         Icon(
                             Icons.Default.CheckCircle,
                             contentDescription = "Selected",
-                            tint = Color(0xFF38BDF8),
+                            tint = Color(0xFF58E4F1),
                             modifier = Modifier.size(16.dp)
                         )
                     }
@@ -1135,12 +1142,12 @@ fun ClipboardTabContent(clipboardHelper: ClipboardManagerHelper) {
         // Info Banner: 3-Day Auto-Expiry & Pinning logic
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF111729)),
             shape = RoundedCornerShape(14.dp)
         ) {
             Column(modifier = Modifier.padding(14.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.PushPin, contentDescription = null, tint = Color(0xFF38BDF8))
+                    Icon(Icons.Default.PushPin, contentDescription = null, tint = Color(0xFF58E4F1))
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = "স্মার্ট ক্লিপবোর্ড ম্যানেজার (Smart Clipboard)",
@@ -1154,7 +1161,7 @@ fun ClipboardTabContent(clipboardHelper: ClipboardManagerHelper) {
                     text = "• সমস্ত কপি করা টেক্সট ৩ দিন (৭২ ঘণ্টা) সংরক্ষণ হয়।\n" +
                             "• পিন (📌) করা ক্লিপ কখনো স্বয়ংক্রিয়ভাবে মুছে যায় না।\n" +
                             "• কীবোর্ডের candidate বার থেকেও দ্রুত এক ট্যাপে পেস্ট করা যায়।",
-                    color = Color(0xFF94A3B8),
+                    color = Color(0xFFA4B0C8),
                     fontSize = 12.sp,
                     lineHeight = 18.sp
                 )
@@ -1170,8 +1177,8 @@ fun ClipboardTabContent(clipboardHelper: ClipboardManagerHelper) {
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                placeholder = { Text("ক্লিপ খুঁজুন...", color = Color(0xFF64748B), fontSize = 13.sp) },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search", tint = Color(0xFF94A3B8)) },
+                placeholder = { Text("ক্লিপ খুঁজুন...", color = Color(0xFF78849B), fontSize = 13.sp) },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search", tint = Color(0xFFA4B0C8)) },
                 modifier = Modifier
                     .weight(1f)
                     .height(50.dp),
@@ -1179,8 +1186,8 @@ fun ClipboardTabContent(clipboardHelper: ClipboardManagerHelper) {
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedTextColor = Color.White,
                     unfocusedTextColor = Color.White,
-                    focusedBorderColor = Color(0xFF38BDF8),
-                    unfocusedBorderColor = Color(0xFF334155)
+                    focusedBorderColor = Color(0xFF58E4F1),
+                    unfocusedBorderColor = Color(0xFF222B43)
                 )
             )
 
@@ -1189,7 +1196,7 @@ fun ClipboardTabContent(clipboardHelper: ClipboardManagerHelper) {
                     clipboardHelper.clearUnpinnedClips()
                     Toast.makeText(context, "Unpinned clips cleared", Toast.LENGTH_SHORT).show()
                 },
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF334155)),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF222B43)),
                 shape = RoundedCornerShape(10.dp)
             ) {
                 Text("Clear All", fontSize = 12.sp)
@@ -1206,7 +1213,7 @@ fun ClipboardTabContent(clipboardHelper: ClipboardManagerHelper) {
             ) {
                 Text(
                     text = if (searchQuery.isNotEmpty()) "কোন ক্লিপ খুঁজে পাওয়া যায়নি" else "ক্লিপবোর্ড খালি। যেকোনো টেক্সট কপি করলে এখানে জমা হবে।",
-                    color = Color(0xFF64748B),
+                    color = Color(0xFF78849B),
                     fontSize = 14.sp,
                     textAlign = TextAlign.Center
                 )
@@ -1244,10 +1251,10 @@ fun ClipboardItemRow(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF111729)),
         shape = RoundedCornerShape(12.dp),
         border = if (clip.isPinned) {
-            androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF38BDF8))
+            androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF58E4F1))
         } else null
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
@@ -1256,7 +1263,7 @@ fun ClipboardItemRow(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(6.dp))
-                            .background(Color(0xFF0369A1))
+                            .background(Color(0xFF176A86))
                             .padding(horizontal = 6.dp, vertical = 2.dp)
                     ) {
                         Text("PINNED (স্থায়ী)", color = Color(0xFFE0F2FE), fontSize = 10.sp, fontWeight = FontWeight.Bold)
@@ -1264,7 +1271,7 @@ fun ClipboardItemRow(
                 } else {
                     Text(
                         text = "মেয়াদ: ${remainingHours}h বাকি",
-                        color = Color(0xFF94A3B8),
+                        color = Color(0xFFA4B0C8),
                         fontSize = 11.sp
                     )
                 }
@@ -1273,7 +1280,7 @@ fun ClipboardItemRow(
                     Icon(
                         if (clip.isPinned) Icons.Default.PushPin else Icons.Outlined.PushPin,
                         contentDescription = "Pin",
-                        tint = if (clip.isPinned) Color(0xFF38BDF8) else Color(0xFF94A3B8)
+                        tint = if (clip.isPinned) Color(0xFF58E4F1) else Color(0xFFA4B0C8)
                     )
                 }
                 IconButton(onClick = onCopy, modifier = Modifier.size(32.dp)) {
@@ -1308,6 +1315,7 @@ fun SettingsTabContent(themeManager: ThemeManager) {
     var predictions by remember { mutableStateOf(themeManager.wordPredictionsEnabled) }
     var autocorrect by remember { mutableStateOf(themeManager.autocorrectEnabled) }
     var personalLearning by remember { mutableStateOf(themeManager.personalLearningEnabled) }
+    var numberRow by remember { mutableStateOf(themeManager.numberRowEnabled) }
     var aggressiveness by remember { mutableStateOf(themeManager.autocorrectAggressiveness) }
     var defaultLayout by remember { mutableStateOf(themeManager.defaultStartupLayout) }
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -1330,13 +1338,13 @@ fun SettingsTabContent(themeManager: ThemeManager) {
         // Sizing & Dimensions
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF111729)),
             shape = RoundedCornerShape(14.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
                     text = "আকার ও ডাইমেনশন (Dimensions)",
-                    color = Color(0xFF38BDF8),
+                    color = Color(0xFF58E4F1),
                     fontWeight = FontWeight.Bold,
                     fontSize = 14.sp
                 )
@@ -1352,7 +1360,7 @@ fun SettingsTabContent(themeManager: ThemeManager) {
                     )
                     Text(
                         text = "${(heightScale * 100).toInt()}%",
-                        color = Color(0xFF38BDF8),
+                        color = Color(0xFF58E4F1),
                         fontWeight = FontWeight.Bold,
                         fontSize = 13.sp
                     )
@@ -1366,9 +1374,9 @@ fun SettingsTabContent(themeManager: ThemeManager) {
                     valueRange = 0.8f..2.5f,
                     modifier = Modifier.fillMaxWidth().testTag("keyboard_height_slider"),
                     colors = SliderDefaults.colors(
-                        thumbColor = Color(0xFF38BDF8),
-                        activeTrackColor = Color(0xFF38BDF8),
-                        inactiveTrackColor = Color(0xFF334155)
+                        thumbColor = Color(0xFF58E4F1),
+                        activeTrackColor = Color(0xFF58E4F1),
+                        inactiveTrackColor = Color(0xFF222B43)
                     )
                 )
 
@@ -1384,7 +1392,7 @@ fun SettingsTabContent(themeManager: ThemeManager) {
                     )
                     Text(
                         text = "${(fontScale * 100).toInt()}%",
-                        color = Color(0xFF38BDF8),
+                        color = Color(0xFF58E4F1),
                         fontWeight = FontWeight.Bold,
                         fontSize = 13.sp
                     )
@@ -1398,10 +1406,34 @@ fun SettingsTabContent(themeManager: ThemeManager) {
                     valueRange = 0.8f..2.5f,
                     modifier = Modifier.fillMaxWidth().testTag("key_font_size_slider"),
                     colors = SliderDefaults.colors(
-                        thumbColor = Color(0xFF38BDF8),
-                        activeTrackColor = Color(0xFF38BDF8),
-                        inactiveTrackColor = Color(0xFF334155)
+                        thumbColor = Color(0xFF58E4F1),
+                        activeTrackColor = Color(0xFF58E4F1),
+                        inactiveTrackColor = Color(0xFF222B43)
                     )
+                )
+            }
+        }
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF111729)),
+            shape = RoundedCornerShape(14.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("স্থায়ী সংখ্যা সারি (Number row)", color = Color.White, fontSize = 14.sp)
+                    Text("মূল কিবোর্ডের ওপরে ০–৯ দেখাবে", color = Color(0xFFA4B0C8), fontSize = 11.sp)
+                }
+                Switch(
+                    checked = numberRow,
+                    onCheckedChange = {
+                        numberRow = it
+                        themeManager.numberRowEnabled = it
+                    },
+                    colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFF7255E8))
                 )
             }
         }
@@ -1409,13 +1441,13 @@ fun SettingsTabContent(themeManager: ThemeManager) {
         // Feedback Toggles
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF111729)),
             shape = RoundedCornerShape(14.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
                     text = "ইনপুট ও ফিডব্যাক (Input & Feedback)",
-                    color = Color(0xFF38BDF8),
+                    color = Color(0xFF58E4F1),
                     fontWeight = FontWeight.Bold,
                     fontSize = 14.sp
                 )
@@ -1428,7 +1460,7 @@ fun SettingsTabContent(themeManager: ThemeManager) {
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text("হ্যাপটিক ফিডব্যাক (Vibration on keypress)", color = Color.White, fontSize = 14.sp)
-                        Text("কী-বোর্ড স্পর্শে হালকা কম্পন", color = Color(0xFF94A3B8), fontSize = 11.sp)
+                        Text("কী-বোর্ড স্পর্শে হালকা কম্পন", color = Color(0xFFA4B0C8), fontSize = 11.sp)
                     }
                     Switch(
                         checked = haptic,
@@ -1436,7 +1468,7 @@ fun SettingsTabContent(themeManager: ThemeManager) {
                             haptic = it
                             themeManager.hapticFeedbackEnabled = it
                         },
-                        colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFF2563EB))
+                        colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFF7255E8))
                     )
                 }
 
@@ -1449,7 +1481,7 @@ fun SettingsTabContent(themeManager: ThemeManager) {
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text("কী সাউন্ড ইফেক্টস (Key Sound Effects)", color = Color.White, fontSize = 14.sp)
-                        Text("কী টাইপ করার সময় ক্লিক শব্দ", color = Color(0xFF94A3B8), fontSize = 11.sp)
+                        Text("কী টাইপ করার সময় ক্লিক শব্দ", color = Color(0xFFA4B0C8), fontSize = 11.sp)
                     }
                     Switch(
                         checked = sound,
@@ -1457,7 +1489,7 @@ fun SettingsTabContent(themeManager: ThemeManager) {
                             sound = it
                             themeManager.keySoundEnabled = it
                         },
-                        colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFF2563EB))
+                        colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFF7255E8))
                     )
                 }
 
@@ -1470,7 +1502,7 @@ fun SettingsTabContent(themeManager: ThemeManager) {
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text("স্মার্ট সাজেশন (Smart Suggestions)", color = Color.White, fontSize = 14.sp)
-                        Text("ক্যান্ডিডেট বারে প্রাসঙ্গিক শব্দ ও প্রেডিকশন প্রদর্শন", color = Color(0xFF94A3B8), fontSize = 11.sp)
+                        Text("ক্যান্ডিডেট বারে প্রাসঙ্গিক শব্দ ও প্রেডিকশন প্রদর্শন", color = Color(0xFFA4B0C8), fontSize = 11.sp)
                     }
                     Switch(
                         checked = predictions,
@@ -1478,7 +1510,7 @@ fun SettingsTabContent(themeManager: ThemeManager) {
                             predictions = it
                             themeManager.wordPredictionsEnabled = it
                         },
-                        colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFF2563EB))
+                        colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFF7255E8))
                     )
                 }
 
@@ -1491,7 +1523,7 @@ fun SettingsTabContent(themeManager: ThemeManager) {
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text("স্মার্ট অটো-কারেক্ট (Smart Autocorrect)", color = Color.White, fontSize = 14.sp)
-                        Text("স্পেসবারে ভুল বানান স্বয়ংক্রিয়ভাবে সঠিক করা", color = Color(0xFF94A3B8), fontSize = 11.sp)
+                        Text("স্পেসবারে ভুল বানান স্বয়ংক্রিয়ভাবে সঠিক করা", color = Color(0xFFA4B0C8), fontSize = 11.sp)
                     }
                     Switch(
                         checked = autocorrect,
@@ -1499,7 +1531,7 @@ fun SettingsTabContent(themeManager: ThemeManager) {
                             autocorrect = it
                             themeManager.autocorrectEnabled = it
                         },
-                        colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFF2563EB))
+                        colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFF7255E8))
                     )
                 }
 
@@ -1507,7 +1539,7 @@ fun SettingsTabContent(themeManager: ThemeManager) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = "অটো-কারেক্ট সংবেদনশীলতা (Aggressiveness)",
-                        color = Color(0xFF38BDF8),
+                        color = Color(0xFF58E4F1),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -1526,7 +1558,7 @@ fun SettingsTabContent(themeManager: ThemeManager) {
                                 modifier = Modifier
                                     .weight(1f)
                                     .clip(RoundedCornerShape(8.dp))
-                                    .background(if (isSelected) Color(0xFF2563EB) else Color(0xFF334155))
+                                    .background(if (isSelected) Color(0xFF7255E8) else Color(0xFF222B43))
                                     .clickable {
                                         aggressiveness = mode
                                         themeManager.autocorrectAggressiveness = mode
@@ -1537,13 +1569,13 @@ fun SettingsTabContent(themeManager: ThemeManager) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                     Text(
                                         text = mode,
-                                        color = if (isSelected) Color.White else Color(0xFFCBD5E1),
+                                        color = if (isSelected) Color.White else Color(0xFFE1E7F2),
                                         fontSize = 11.sp,
                                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                                     )
                                     Text(
                                         text = label,
-                                        color = if (isSelected) Color(0xFFE0F2FE) else Color(0xFF94A3B8),
+                                        color = if (isSelected) Color(0xFFE0F2FE) else Color(0xFFA4B0C8),
                                         fontSize = 9.sp
                                     )
                                 }
@@ -1561,7 +1593,7 @@ fun SettingsTabContent(themeManager: ThemeManager) {
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text("ব্যক্তিগত শব্দ শিক্ষা (Personal Learning)", color = Color.White, fontSize = 14.sp)
-                        Text("আপনার ঘন ঘন টাইপ করা শব্দ অফলাইনে মনে রাখা", color = Color(0xFF94A3B8), fontSize = 11.sp)
+                        Text("আপনার ঘন ঘন টাইপ করা শব্দ অফলাইনে মনে রাখা", color = Color(0xFFA4B0C8), fontSize = 11.sp)
                     }
                     Switch(
                         checked = personalLearning,
@@ -1569,7 +1601,7 @@ fun SettingsTabContent(themeManager: ThemeManager) {
                             personalLearning = it
                             themeManager.personalLearningEnabled = it
                         },
-                        colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFF2563EB))
+                        colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFF7255E8))
                     )
                 }
 
@@ -1580,7 +1612,7 @@ fun SettingsTabContent(themeManager: ThemeManager) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(8.dp))
-                        .background(Color(0xFF334155))
+                        .background(Color(0xFF222B43))
                         .clickable {
                             coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) {
                                 try {
@@ -1602,7 +1634,7 @@ fun SettingsTabContent(themeManager: ThemeManager) {
                     Spacer(modifier = Modifier.width(8.dp))
                     Column {
                         Text("শেখা শব্দ রিসেট (Clear Learned Words)", color = Color(0xFFF87171), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                        Text("অফলাইনে সংরক্ষিত ব্যক্তিগত ডিকশনারি মুছে ফেলবে", color = Color(0xFF94A3B8), fontSize = 10.sp)
+                        Text("অফলাইনে সংরক্ষিত ব্যক্তিগত ডিকশনারি মুছে ফেলবে", color = Color(0xFFA4B0C8), fontSize = 10.sp)
                     }
                 }
             }
@@ -1613,20 +1645,20 @@ fun SettingsTabContent(themeManager: ThemeManager) {
 
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF111729)),
             shape = RoundedCornerShape(14.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
                     text = "🌐 স্পেসবার সোয়াইপ লেআউট নির্বাচন (Spacebar Layouts)",
-                    color = Color(0xFF38BDF8),
+                    color = Color(0xFF58E4F1),
                     fontWeight = FontWeight.Bold,
                     fontSize = 14.sp
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = "যে লেআউটগুলো সক্রিয় রাখবেন, স্পেসবারে ডানে/বামে সোয়াইপ করলে কেবল সেগুলোর মধ্যেই স্যুইচ হবে।",
-                    color = Color(0xFF94A3B8),
+                    color = Color(0xFFA4B0C8),
                     fontSize = 12.sp
                 )
                 Spacer(modifier = Modifier.height(10.dp))
@@ -1658,7 +1690,7 @@ fun SettingsTabContent(themeManager: ThemeManager) {
                                 enabledLayoutsSet = themeManager.enabledLayouts
                             },
                             colors = CheckboxDefaults.colors(
-                                checkedColor = Color(0xFF38BDF8),
+                                checkedColor = Color(0xFF58E4F1),
                                 checkmarkColor = Color.White
                             )
                         )
@@ -1672,13 +1704,13 @@ fun SettingsTabContent(themeManager: ThemeManager) {
         // Default Startup Layout
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF111729)),
             shape = RoundedCornerShape(14.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
                     text = "ডিফল্ট স্টার্টআপ লেআউট (Default Startup Layout)",
-                    color = Color(0xFF38BDF8),
+                    color = Color(0xFF58E4F1),
                     fontWeight = FontWeight.Bold,
                     fontSize = 14.sp
                 )
@@ -1709,7 +1741,7 @@ fun SettingsTabContent(themeManager: ThemeManager) {
                                 defaultLayout = modeKey
                                 themeManager.defaultStartupLayout = modeKey
                             },
-                            colors = RadioButtonDefaults.colors(selectedColor = Color(0xFF38BDF8))
+                            colors = RadioButtonDefaults.colors(selectedColor = Color(0xFF58E4F1))
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(text = title, color = Color.White, fontSize = 13.sp)
@@ -1784,20 +1816,20 @@ fun GuidesTabContent() {
 fun GuideCard(title: String, content: String) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF111729)),
         shape = RoundedCornerShape(14.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
                 text = title,
-                color = Color(0xFF38BDF8),
+                color = Color(0xFF58E4F1),
                 fontWeight = FontWeight.Bold,
                 fontSize = 14.sp
             )
             Spacer(modifier = Modifier.height(6.dp))
             Text(
                 text = content,
-                color = Color(0xFFCBD5E1),
+                color = Color(0xFFE1E7F2),
                 fontSize = 13.sp,
                 lineHeight = 20.sp
             )
@@ -1842,7 +1874,7 @@ fun checkIsImeSelected(context: Context): Boolean {
 fun Greeting(name: String, modifier: Modifier = Modifier) {
     Surface(
         modifier = modifier.fillMaxWidth(),
-        color = Color(0xFF0F172A)
+        color = Color(0xFF080B18)
     ) {
         Column(
             modifier = Modifier.padding(24.dp),
@@ -1850,15 +1882,17 @@ fun Greeting(name: String, modifier: Modifier = Modifier) {
         ) {
             Text(
                 text = "Welcome $name!",
-                color = Color(0xFF38BDF8),
+                color = Color(0xFF58E4F1),
                 fontWeight = FontWeight.Bold,
                 fontSize = 20.sp
             )
             Text(
                 text = "UV Keyboard Ready",
-                color = Color(0xFF94A3B8),
+                color = Color(0xFFA4B0C8),
                 fontSize = 14.sp
             )
         }
     }
 }
+
+
