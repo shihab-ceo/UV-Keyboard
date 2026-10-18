@@ -1289,6 +1289,7 @@ class UVIME : InputMethodService() {
             container.setOnTouchListener { v, event ->
                 if (gestureDetector.onTouchEvent(event)) {
                     v.isPressed = false
+                        animateKeyPress(v, false)
                     return@setOnTouchListener true
                 }
                 when (event.action) {
@@ -1297,6 +1298,7 @@ class UVIME : InputMethodService() {
                         startY = event.y
                         hasSwiped = false
                         v.isPressed = true
+                        animateKeyPress(v, true)
                         true
                     }
                     MotionEvent.ACTION_MOVE -> {
@@ -1305,6 +1307,7 @@ class UVIME : InputMethodService() {
                         if (!hasSwiped && Math.abs(dx) > minSwipeDistance && Math.abs(dx) > Math.abs(dy) * 1.2f) {
                             hasSwiped = true
                             v.isPressed = false
+                        animateKeyPress(v, false)
                             if (dx > 0) {
                                 cycleNextLayoutMode()
                             } else {
@@ -1315,6 +1318,7 @@ class UVIME : InputMethodService() {
                     }
                     MotionEvent.ACTION_UP -> {
                         v.isPressed = false
+                        animateKeyPress(v, false)
                         if (!hasSwiped) {
                             playKeyFeedback()
                             handleKeyInput(key)
@@ -1323,6 +1327,7 @@ class UVIME : InputMethodService() {
                     }
                     MotionEvent.ACTION_CANCEL -> {
                         v.isPressed = false
+                        animateKeyPress(v, false)
                         true
                     }
                     else -> false
@@ -1412,6 +1417,7 @@ class UVIME : InputMethodService() {
                     MotionEvent.ACTION_DOWN -> {
                         isLongPressed = false
                         v.isPressed = true
+                        animateKeyPress(v, true)
                         startX = event.x
                         startY = event.y
                         if (key.type == KeyType.BACKSPACE) {
@@ -1433,6 +1439,7 @@ class UVIME : InputMethodService() {
                     }
                     MotionEvent.ACTION_UP -> {
                         v.isPressed = false
+                        animateKeyPress(v, false)
                         keyHandler.removeCallbacks(longPressRunnable)
                         if (key.type == KeyType.BACKSPACE) {
                             stopBackspaceRepeat()
@@ -1444,6 +1451,7 @@ class UVIME : InputMethodService() {
                     }
                     MotionEvent.ACTION_CANCEL -> {
                         v.isPressed = false
+                        animateKeyPress(v, false)
                         keyHandler.removeCallbacks(longPressRunnable)
                         if (key.type == KeyType.BACKSPACE) {
                             stopBackspaceRepeat()
@@ -1705,6 +1713,18 @@ class UVIME : InputMethodService() {
         }
     }
 
+    private fun animateKeyPress(view: View, pressed: Boolean) {
+        view.animate().cancel()
+        view.animate()
+            .scaleX(if (pressed) 0.96f else 1f)
+            .scaleY(if (pressed) 0.96f else 1f)
+            .setDuration(if (pressed) 75L else 145L)
+            .setInterpolator(
+                if (pressed) android.view.animation.DecelerateInterpolator()
+                else android.view.animation.OvershootInterpolator(1.8f)
+            )
+            .start()
+    }
     private fun createKeyRippleDrawable(
         normalColor: Int,
         pressedColor: Int,
@@ -1734,6 +1754,7 @@ class UVIME : InputMethodService() {
         )
     }
 }
+
 
 
 

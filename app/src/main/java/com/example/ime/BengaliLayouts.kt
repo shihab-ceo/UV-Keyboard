@@ -112,7 +112,7 @@ object BengaliLayouts {
         }
         val row3Keys = mutableListOf<KeyboardKey>()
         row3Keys.add(KeyboardKey(label = "123", output = "", type = KeyType.SHIFT, weight = 1.3f))
-        listOf("[", "]", "\\", "|", "~", "^", "_", "`").forEach {
+        listOf("[", "]", "\\", "|", "~", "^", "_", "?").forEach {
             row3Keys.add(KeyboardKey(label = it, output = it))
         }
         row3Keys.add(KeyboardKey(label = "⌫", output = "", type = KeyType.BACKSPACE, weight = 1.3f))
@@ -134,3 +134,4 @@ object BengaliLayouts {
         "🤝", "💡", "📌", "🎯", "☕", "🌺", "🌹", "⚡", "🌟", "💪"
     )
 }
+
