@@ -988,6 +988,15 @@ class UVIME : InputMethodService() {
                 this.isCapsLock = this@UVIME.isCapsLock
                 this.enterActionIcon = getDynamicActionIcon()
                 this.onKeyPreviewListener = { label, source, rect -> showKeyPreview(label, source, rect) }
+                this.onKeyLongPressListener = { payload ->
+                    val key = payload as? KeyboardKey
+                    if (currentMode == ThemeManager.LAYOUT_ENGLISH &&
+                        key?.output?.equals("v", ignoreCase = true) == true
+                    ) {
+                        pasteLatestClipboardItem()
+                        true
+                    } else false
+                }
                 this.onKeyCommitListener = { output ->
                     playKeyFeedback()
                     if (isTranslatorOpen) {

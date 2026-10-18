@@ -79,6 +79,7 @@ abstract class BaseKeyboardView @JvmOverloads constructor(
     var onEmojiToggleListener: (() -> Unit)? = null
     var onSettingsHintListener: (() -> Unit)? = null
     var onKeyPreviewListener: ((String, View, Rect) -> Unit)? = null
+    var onKeyLongPressListener: ((Any) -> Boolean)? = null
 
     // --- Keyboard States ---
     var isShifted: Boolean = false
@@ -258,7 +259,9 @@ abstract class BaseKeyboardView @JvmOverloads constructor(
                     onKeyPreviewListener?.invoke(label, this, item.rect)
                 }
             }
-            handleKeyLongPress(item)
+            val handledByService = (item.type as? KeyType.Character)
+                ?.let { onKeyLongPressListener?.invoke(it.payload) } == true
+            if (!handledByService) handleKeyLongPress(item)
             invalidate()
         }
     }
