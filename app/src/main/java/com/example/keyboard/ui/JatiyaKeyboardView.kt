@@ -11,6 +11,7 @@ import android.util.AttributeSet
 import com.example.keyboard.engine.JatiyaKeyMapping
 import com.example.keyboard.engine.JatiyaLayoutEngine
 import com.example.keyboard.engine.KeyMapping
+import com.example.ime.KeyboardKey
 
 /**
  * Custom High-Performance Canvas Keyboard View for Bengali "Jatiya" layout.
@@ -149,7 +150,7 @@ class JatiyaKeyboardView @JvmOverloads constructor(
             Pair(wEmoji * unitR4, KeyType.Emoji),
             Pair(wComma * unitR4, KeyType.Comma),
             Pair(wSpace * unitR4, KeyType.Space),
-            Pair(wDari * unitR4, KeyType.Dari),
+            Pair(wDari * unitR4, KeyType.Dari(KeyboardKey(label = "\u0964", hint = ".", output = "\u0964"))),
             Pair(wEnter * unitR4, KeyType.Enter)
         )
 
@@ -194,3 +195,4 @@ class JatiyaKeyboardView @JvmOverloads constructor(
         }
     }
 }
+

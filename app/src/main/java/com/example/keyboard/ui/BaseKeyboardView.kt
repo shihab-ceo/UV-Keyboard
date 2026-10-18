@@ -220,7 +220,7 @@ abstract class BaseKeyboardView @JvmOverloads constructor(
         object Emoji : KeyType()
         object Comma : KeyType()
         object Space : KeyType()
-        object Dari : KeyType()
+        data class Dari(val key: KeyboardKey) : KeyType()
         object Enter : KeyType()
     }
 
@@ -515,7 +515,7 @@ abstract class BaseKeyboardView @JvmOverloads constructor(
                     drawCenteredLabel(canvas, item.rect, getSpacebarLabel(), spacebarPaint)
                 }
                 is KeyType.Dari -> {
-                    drawKeyWithHint(canvas, item.rect, "।", ".")
+                    drawKeyWithHint(canvas, item.rect, type.key.label, type.key.hint.orEmpty())
                 }
                 is KeyType.Enter -> {
                     specialKeyPaint.color = keyAccentColor
@@ -780,7 +780,7 @@ abstract class BaseKeyboardView @JvmOverloads constructor(
                 onSpaceListener?.invoke()
             }
             is KeyType.Dari -> {
-                onKeyCommitListener?.invoke("।")
+                onKeyCommitListener?.invoke(type.key.output)
             }
             is KeyType.Enter -> {
                 onEnterListener?.invoke()
@@ -826,7 +826,7 @@ abstract class BaseKeyboardView @JvmOverloads constructor(
                 onSettingsHintListener?.invoke()
             }
             is KeyType.Dari -> {
-                onKeyCommitListener?.invoke(".")
+                onKeyCommitListener?.invoke(type.key.hint?.takeIf { it.isNotBlank() } ?: type.key.output)
             }
             else -> {}
         }
@@ -935,7 +935,7 @@ abstract class BaseKeyboardView @JvmOverloads constructor(
                     else -> {
                         when (key.label) {
                             "," -> KeyType.Comma
-                            "।", "." -> KeyType.Dari
+                            "।", "." -> KeyType.Dari(key)
                             else -> KeyType.Character(key)
                         }
                     }
@@ -961,3 +961,5 @@ abstract class BaseKeyboardView @JvmOverloads constructor(
         }
     }
 }
+
+
