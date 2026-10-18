@@ -1219,12 +1219,12 @@ class UVIME : InputMethodService() {
         val lp = FrameLayout.LayoutParams(width, height).apply { leftMargin = left; topMargin = top }
         wrapper.addView(popup, lp)
         keyPreviewView = popup
-        popup.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(130)
-            .setInterpolator(android.view.animation.OvershootInterpolator(1.25f)).start()
+        popup.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(55)
+            .setInterpolator(android.view.animation.DecelerateInterpolator()).start()
 
         val hide = Runnable { hideKeyPreview() }
         keyPreviewHideRunnable = hide
-        keyPreviewHandler.postDelayed(hide, 550L)
+        keyPreviewHandler.postDelayed(hide, 95L)
     }
 
     private fun hideKeyPreview() {
@@ -1234,7 +1234,7 @@ class UVIME : InputMethodService() {
         keyPreviewView = null
         (popup.parent as? ViewGroup)?.let { parent ->
             popup.animate().cancel()
-            popup.animate().alpha(0f).scaleX(0.78f).scaleY(0.78f).setDuration(90)
+            popup.animate().alpha(0f).scaleX(0.82f).scaleY(0.82f).setDuration(45)
                 .withEndAction { parent.removeView(popup) }.start()
         }
     }
