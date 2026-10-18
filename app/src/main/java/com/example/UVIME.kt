@@ -7,6 +7,7 @@ import android.content.res.ColorStateList
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
+import android.graphics.Rect
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.RippleDrawable
@@ -81,6 +82,9 @@ class UVIME : InputMethodService() {
 
     // UI elements
     private var rootView: View? = null
+    private val keyPreviewHandler = Handler(Looper.getMainLooper())
+    private var keyPreviewView: View? = null
+    private var keyPreviewHideRunnable: Runnable? = null
     private var ivBgImage: ImageView? = null
     private var vBgOverlay: View? = null
     private var llCandidateBar: LinearLayout? = null
@@ -415,6 +419,7 @@ class UVIME : InputMethodService() {
 
     override fun onFinishInputView(finishingInput: Boolean) {
         super.onFinishInputView(finishingInput)
+        hideKeyPreview()
         voiceHelper?.stopListening()
         phoneticBuffer.clear()
         currentWordBuffer.clear()
@@ -982,6 +987,7 @@ class UVIME : InputMethodService() {
                 this.isShifted = this@UVIME.isShifted
                 this.isCapsLock = this@UVIME.isCapsLock
                 this.enterActionIcon = getDynamicActionIcon()
+                this.onKeyPreviewListener = { label, source, rect -> showKeyPreview(label, source, rect) }
                 this.onKeyCommitListener = { output ->
                     playKeyFeedback()
                     if (isTranslatorOpen) {
@@ -1151,6 +1157,85 @@ class UVIME : InputMethodService() {
             }
 
             rowsContainer.addView(rowLayout)
+        }
+    }
+
+    private fun showKeyPreview(label: String, source: View, keyRect: Rect) {
+        if (label.isBlank()) return
+        val wrapper = rootView?.findViewById<FrameLayout>(R.id.fl_keyboard_wrapper) ?: return
+        if (wrapper.width == 0 || wrapper.height == 0 || source.width == 0 || source.height == 0) return
+
+        hideKeyPreview()
+        val density = resources.displayMetrics.density
+        val width = (58 * density).toInt()
+        val height = (66 * density).toInt()
+        val sourceLocation = IntArray(2)
+        val wrapperLocation = IntArray(2)
+        source.getLocationOnScreen(sourceLocation)
+        wrapper.getLocationOnScreen(wrapperLocation)
+        val keyCenterX = sourceLocation[0] + keyRect.centerX() - wrapperLocation[0]
+        val keyTop = sourceLocation[1] + keyRect.top - wrapperLocation[1]
+
+        val theme = themeManager.getCurrentTheme()
+        val bubbleColor = if (theme.isDark) Color.parseColor("#343844") else Color.WHITE
+        val strokeColor = if (theme.isDark) Color.parseColor("#596273") else Color.parseColor("#CBD5E1")
+        val popup = FrameLayout(this).apply {
+            layoutParams = FrameLayout.LayoutParams(width, height)
+            elevation = 12 * density
+            alpha = 0f
+            scaleX = 0.72f
+            scaleY = 0.72f
+            rotation = 0f
+        }
+        val tail = View(this).apply {
+            background = GradientDrawable().apply {
+                setColor(bubbleColor)
+                setStroke((1 * density).toInt().coerceAtLeast(1), strokeColor)
+                cornerRadius = 3 * density
+            }
+            rotation = 45f
+            layoutParams = FrameLayout.LayoutParams((14 * density).toInt(), (14 * density).toInt(), Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply {
+                bottomMargin = (5 * density).toInt()
+            }
+        }
+        popup.addView(tail)
+        val labelView = TextView(this).apply {
+            text = com.example.ime.BengaliCompositionHelper.stripDottedCircle(label)
+            setTextColor(theme.textColor)
+            textSize = 30f
+            typeface = Typeface.DEFAULT_BOLD
+            gravity = Gravity.CENTER
+            background = GradientDrawable().apply {
+                setColor(bubbleColor)
+                cornerRadius = 13 * density
+                setStroke((1 * density).toInt().coerceAtLeast(1), strokeColor)
+            }
+            layoutParams = FrameLayout.LayoutParams(width, (54 * density).toInt(), Gravity.TOP)
+        }
+        popup.addView(labelView)
+
+        val left = (keyCenterX - width / 2).coerceIn(0, (wrapper.width - width).coerceAtLeast(0))
+        val top = (keyTop - height - 3 * density).toInt().coerceAtLeast(0)
+        val lp = FrameLayout.LayoutParams(width, height).apply { leftMargin = left; topMargin = top }
+        wrapper.addView(popup, lp)
+        keyPreviewView = popup
+        popup.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(130)
+            .setInterpolator(android.view.animation.OvershootInterpolator(1.25f)).start()
+
+        val hide = Runnable { hideKeyPreview() }
+        keyPreviewHideRunnable = hide
+        keyPreviewHandler.postDelayed(hide, 550L)
+    }
+
+    private fun hideKeyPreview() {
+        keyPreviewHideRunnable?.let(keyPreviewHandler::removeCallbacks)
+        keyPreviewHideRunnable = null
+        val popup = keyPreviewView ?: return
+        keyPreviewView = null
+        (popup.parent as? ViewGroup)?.let { parent ->
+            popup.animate().cancel()
+            popup.animate().alpha(0f).scaleX(0.78f).scaleY(0.78f).setDuration(90)
+                .withEndAction { parent.removeView(popup) }.start()
         }
     }
 
@@ -1364,6 +1449,7 @@ class UVIME : InputMethodService() {
                         key.label.length == 1 && key.label[0].isLetter() -> key.label.uppercase()
                         else -> key.output
                     }
+                    showKeyPreview(targetChar, container, Rect(0, 0, container.width, container.height))
                     val ic = currentInputConnection
                     if (currentMode == ThemeManager.LAYOUT_AVRO && isAsciiLetter(targetChar)) {
                         phoneticBuffer.append(targetChar)
@@ -1445,6 +1531,14 @@ class UVIME : InputMethodService() {
                             stopBackspaceRepeat()
                         } else if (!isLongPressed) {
                             playKeyFeedback()
+                            if (key.type == KeyType.NORMAL) {
+                                val preview = when {
+                                    (isShifted || isCapsLock) && key.shiftOutput.isNotEmpty() -> key.shiftOutput
+                                    (isShifted || isCapsLock) && key.output.length == 1 && key.output[0].isLetter() -> key.output.uppercase()
+                                    else -> key.label
+                                }
+                                showKeyPreview(preview, container, Rect(0, 0, container.width, container.height))
+                            }
                             handleKeyInput(key)
                         }
                         true

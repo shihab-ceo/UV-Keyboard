@@ -24,6 +24,7 @@ import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
+import com.example.keyboard.engine.KeyMapping
 import com.example.CustomThemeModel
 import com.example.CustomThemeRepository
 import com.example.KeyboardTheme
@@ -77,6 +78,7 @@ abstract class BaseKeyboardView @JvmOverloads constructor(
     var onSymbolsToggleListener: (() -> Unit)? = null
     var onEmojiToggleListener: (() -> Unit)? = null
     var onSettingsHintListener: (() -> Unit)? = null
+    var onKeyPreviewListener: ((String, View, Rect) -> Unit)? = null
 
     // --- Keyboard States ---
     var isShifted: Boolean = false
@@ -251,6 +253,11 @@ abstract class BaseKeyboardView @JvmOverloads constructor(
     private val longPressRunnable = Runnable {
         activePressedKey?.let { item ->
             isLongPressTriggered = true
+            (item.type as? KeyType.Character)?.let { character ->
+                previewLabel(character.payload, longPress = true).takeIf { it.isNotBlank() }?.let { label ->
+                    onKeyPreviewListener?.invoke(label, this, item.rect)
+                }
+            }
             handleKeyLongPress(item)
             invalidate()
         }
@@ -484,6 +491,24 @@ abstract class BaseKeyboardView @JvmOverloads constructor(
     // --- Canvas Utilities & Rendering Pipeline ---
     protected val labelTextBounds = Rect()
 
+    private fun previewLabel(payload: Any, longPress: Boolean = false): String = when (payload) {
+        is KeyboardKey -> when {
+            longPress && !payload.hint.isNullOrBlank() -> payload.hint
+            longPress && (isShifted || isCapsLock) && payload.shiftOutput.isNotEmpty() -> payload.shiftOutput
+            longPress -> payload.output
+            (isShifted || isCapsLock) && payload.shiftOutput.isNotEmpty() -> payload.shiftOutput
+            (isShifted || isCapsLock) && payload.output.length == 1 && payload.output[0].isLetter() -> payload.output.uppercase()
+            payload.output.length == 1 && payload.output[0].isLetter() -> payload.output.lowercase()
+            else -> payload.label
+        }
+        is KeyMapping -> when {
+            longPress && (isShifted || isCapsLock) -> payload.shiftedLongPress
+            longPress -> payload.unshiftedLongPress
+            (isShifted || isCapsLock) -> payload.shiftedPrimary
+            else -> payload.unshiftedPrimary
+        }
+        else -> ""
+    }
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         drawKeyboardBackground(canvas)
@@ -717,6 +742,11 @@ abstract class BaseKeyboardView @JvmOverloads constructor(
                     return true
                 }
                 if (key != null && !isLongPressTriggered && key.type !is KeyType.Backspace) {
+                    (key.type as? KeyType.Character)?.let { character ->
+                        previewLabel(character.payload).takeIf { it.isNotBlank() }?.let { label ->
+                            onKeyPreviewListener?.invoke(label, this, key.rect)
+                        }
+                    }
                     handleKeyTap(key)
                 }
                 swipePath.clear()
@@ -961,5 +991,6 @@ abstract class BaseKeyboardView @JvmOverloads constructor(
         }
     }
 }
+
 
 
