@@ -51,6 +51,8 @@ class ThemeManager(private val context: Context) {
         const val KEY_DEFAULT_LAYOUT = "default_layout"
         const val KEY_ENABLED_LAYOUTS = "enabled_layouts"
         const val KEY_NUMBER_ROW = "number_row_enabled"
+        const val KEY_KEY_PREVIEW_ENABLED = "key_preview_enabled"
+        const val KEY_KEY_PREVIEW_DURATION_MS = "key_preview_duration_ms"
 
         // Layout constants
         const val LAYOUT_JATIYA = "JATIYA"
@@ -422,6 +424,14 @@ class ThemeManager(private val context: Context) {
     var numberRowEnabled: Boolean
         get() = prefs.getBoolean(KEY_NUMBER_ROW, false)
         set(value) = prefs.edit().putBoolean(KEY_NUMBER_ROW, value).apply()
+
+    var keyPreviewEnabled: Boolean
+        get() = prefs.getBoolean(KEY_KEY_PREVIEW_ENABLED, true)
+        set(value) = prefs.edit().putBoolean(KEY_KEY_PREVIEW_ENABLED, value).apply()
+
+    var keyPreviewDurationMs: Int
+        get() = prefs.getInt(KEY_KEY_PREVIEW_DURATION_MS, 155).coerceIn(60, 400)
+        set(value) = prefs.edit().putInt(KEY_KEY_PREVIEW_DURATION_MS, value.coerceIn(60, 400)).apply()
 
     var autocorrectAggressiveness: String
         get() = prefs.getString(KEY_AUTOCORRECT_AGGRESSIVENESS, "Balanced") ?: "Balanced"

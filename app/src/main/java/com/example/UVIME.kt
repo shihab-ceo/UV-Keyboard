@@ -1161,7 +1161,7 @@ class UVIME : InputMethodService() {
     }
 
     private fun showKeyPreview(label: String, source: View, keyRect: Rect) {
-        if (label.isBlank()) return
+        if (label.isBlank() || !themeManager.keyPreviewEnabled) return
         val wrapper = rootView?.findViewById<FrameLayout>(R.id.fl_keyboard_wrapper) ?: return
         if (wrapper.width == 0 || wrapper.height == 0 || source.width == 0 || source.height == 0) return
 
@@ -1224,7 +1224,7 @@ class UVIME : InputMethodService() {
 
         val hide = Runnable { hideKeyPreview() }
         keyPreviewHideRunnable = hide
-        keyPreviewHandler.postDelayed(hide, 155L)
+        keyPreviewHandler.postDelayed(hide, themeManager.keyPreviewDurationMs.toLong())
     }
 
     private fun hideKeyPreview() {

@@ -1316,6 +1316,8 @@ fun SettingsTabContent(themeManager: ThemeManager) {
     var autocorrect by remember { mutableStateOf(themeManager.autocorrectEnabled) }
     var personalLearning by remember { mutableStateOf(themeManager.personalLearningEnabled) }
     var numberRow by remember { mutableStateOf(themeManager.numberRowEnabled) }
+    var keyPreviewEnabled by remember { mutableStateOf(themeManager.keyPreviewEnabled) }
+    var keyPreviewDuration by remember { mutableIntStateOf(themeManager.keyPreviewDurationMs) }
     var aggressiveness by remember { mutableStateOf(themeManager.autocorrectAggressiveness) }
     var defaultLayout by remember { mutableStateOf(themeManager.defaultStartupLayout) }
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -1434,6 +1436,60 @@ fun SettingsTabContent(themeManager: ThemeManager) {
                         themeManager.numberRowEnabled = it
                     },
                     colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFF7255E8))
+                )
+            }
+        }
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF111729)),
+            shape = RoundedCornerShape(14.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("কী প্রিভিউ (Key preview)", color = Color.White, fontSize = 14.sp)
+                        Text("চাপলে অক্ষর ভেসে দেখানো", color = Color(0xFFA4B0C8), fontSize = 11.sp)
+                    }
+                    Switch(
+                        checked = keyPreviewEnabled,
+                        onCheckedChange = {
+                            keyPreviewEnabled = it
+                            themeManager.keyPreviewEnabled = it
+                        },
+                        colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFF7255E8))
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "সময় (Duration)",
+                        color = if (keyPreviewEnabled) Color.White else Color(0xFF788397),
+                        fontSize = 13.sp,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Text(
+                        "$keyPreviewDuration ms",
+                        color = if (keyPreviewEnabled) Color(0xFF58E4F1) else Color(0xFF788397),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp
+                    )
+                }
+                Slider(
+                    value = keyPreviewDuration.toFloat(),
+                    onValueChange = {
+                        keyPreviewDuration = it.toInt().coerceIn(60, 400)
+                        themeManager.keyPreviewDurationMs = keyPreviewDuration
+                    },
+                    valueRange = 60f..400f,
+                    steps = 33,
+                    enabled = keyPreviewEnabled,
+                    modifier = Modifier.fillMaxWidth().testTag("key_preview_duration_slider"),
+                    colors = SliderDefaults.colors(
+                        thumbColor = Color(0xFF58E4F1),
+                        activeTrackColor = Color(0xFF58E4F1),
+                        inactiveTrackColor = Color(0xFF222B43)
+                    )
                 )
             }
         }
